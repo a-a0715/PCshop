@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCショップ（名前シンプルすぎだろ）</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #121214;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 { border-bottom: 2px solid #00ffcc; padding-bottom: 10px; }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 900px; }
+        .panel { background: #1e1e24; padding: 20px; border-radius: 8px; border: 1px solid #00ffcc; flex: 1; min-width: 350px; }
+        
+        .user-selector {
+            background: #25252d; padding: 10px 20px; border-radius: 8px;
+            border: 1px solid #00ffcc; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+        }
+        .user-btn {
+            background: #333; color: #fff; border: 1px solid #555; padding: 8px 15px;
+            border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .user-btn.active {
+            background: #00ffcc; color: #121214; border-color: #00ffcc;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+
+        .money { font-size: 1.8rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px #00ffcc; } 
+        .btc-money { font-size: 1.8rem; font-weight: bold; color: #ff9900; text-shadow: 0 0 10px #ff9900; } 
+
+        .btn-click {
+            background: #00ffcc; color: #121214; border: none; padding: 12px 25px;
+            font-size: 1.1rem; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; margin-bottom: 10px;
+        }
+        .btn-dark {
+            background: #ff9900; color: #121214; border: none; padding: 10px 15px;
+            font-size: 1rem; font-weight: bold; border-radius: 5px; cursor: pointer;
+        }
+        .btn-dark:disabled { background: #444; color: #888; cursor: not-allowed; }
+        
+        .shop-item {
+            background: #151518; border: 1px solid #555; padding: 12px;
+            margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .shop-btn { background: #ff0055; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .shop-btn:disabled { background: #444; color: #888; cursor: not-allowed; }        
+        
+        /* チャートボックス */
+        .chart-box { background: #151518; padding: 10px; border-radius: 5px; border: 1px solid #ff9900; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <h1>ELECTRONICS SHOP</h1>
+
+    <div class="user-selector">
+        <span>ユーザー選択:</span>
+        <button id="user-btn-1" class="user-btn active" onclick="switchUser(1)">ユーザー 1</button>
+        <button id="user-btn-2" class="user-btn" onclick="switchUser(2)">ユーザー 2</button>
+        <button id="user-btn-3" class="user-btn" onclick="swigchUser(3)">ユーザー 3</button>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h3>🏢 PCショップ</h3>
+            <div class="money"><span id="money-text">0</span> 円</div>
+            <div style="margin-top: 5px;">自動秒速: <span id="mps-text">0</span> 円/秒</div>
+            <div style="color: #ffff00;">クリックパワー: <span id="cpc-text">1</span> 円</div>
+            <br>
+            <button class="btn-click" onclick="clickMain()">パーツを組み立てる！</button>
+            
+            <div style="margin-bottom: 15px;">
+                <button onclick="saveGame()" style="background: #333; color: #fff; border: 1px solid #fff; padding: 5px 10px; cursor: pointer;">セーブ</button>
+                <button onclick="resetGame()" style="background: #500; color: #ff8888; border: 1px solid #ff8888; padding: 5px 10px; cursor: pointer; margin-left: 5px;">リセット</button>
+            </div>
+
+            <h4>🔧 パーツショップ</h4>
+            <div class="shop-item">
+                <div><strong>中古のCPU</strong><br><small>効果: +1円/秒</small></div>
+                <button class="shop-btn" id="btn-cpu" onclick="buyItem('cpu')">10円 (0)</button>
+            </div>
+            <div class="shop-item">
+                <div><strong>普通のグラボ</strong><br><small>効果: +15円/秒</small></div>
+                <button class="shop-btn" id="btn-gpu" onclick="buyItem('gpu')">150円 (0)</button>
+            </div>
+            <div class="shop-item">
+                <div><strong>光るLEDケース</strong><br><small>効果: クリックパワー+5円</small></div>
+                <button class="shop-btn" id="btn-case" onclick="buyItem('case')">500円 (0)</button>
+            </div>
+        </div>
+
+        <div class="panel" style="border-color: #ff9900;">
+            <h3>マイニング工場</h3>
+            <div class="btc-money"><span id="btc-text">0.0000</span> BTC</div>
+            <div style="margin-top: 5px; color: #ff9900;">稼働中のリグ: <span id="rig-text">0</span> 台</div>
+            <div style="color: #ffaa55;">現在のBTC価格: 1 BTC = <span id="btc-rate-text">10000</span> 円</div>
+            <br>
+            
+            <button class="btn-dark" id="btn-to-mining" onclick="convertGpuToRig()">持っているグラボを1枚マイニングに回す</button>
+            <button class="btn-dark" style="background: #00ffcc; margin-left: 5px;" onclick="sellBtc()">BTCをすべて現金化する</button>
+
+            <div class="chart-box">
+                <canvas id="btcChart" style="width:100%; height:180px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. ゲームデータ ---
+        function createNewPlayerData() {
+            return {
+                money: 0,
+                mps: 0,
+                clickPower: 1, 
+                cpuCount: 0,
+                gpuCount: 0,
+                caseCount: 0,
+                btc: 0,         // 所持ビットコイン
+                miningRigs: 0   // マイニングに回したグラボの数
+            };
+        }
+
+        let player = createNewPlayerData();
+        let currentUserId = 1;
+
+        const config = {
+            cpu: { basePrice: 10, mpsEffect: 1, clickEffect: 0 },
+            gpu: { basePrice: 150, mpsEffect: 15, clickEffect: 0 },
+            case: { basePrice: 500, mpsEffect: 0, clickEffect: 5 } 
+        };
+
+        let currentBtcRate = 10000; // 初期価格
+        let priceHistory = [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]; // グラフ用データ
+        let btcChart;
+
+        // --- 2. メインロジック ---
+        function clickMain() {
+            player.money += player.clickPower;
+            updateUI();
+        }
+
+        function buyItem(type) {
+            let price = Math.floor(config[type].basePrice * Math.pow(1.15, player[type + 'Count']));
+            if (player.money >= price) {
+                player.money -= price;
+                player[type + 'Count']++;
+                recalculateMPS();
+                if (config[type].clickEffect > 0) player.clickPower += config[type].clickEffect;
+                updateUI();
+                saveGame();
+            }
+        }
+
+        // グラボを裏のマイニング機に転用する
+        function convertGpuToRig() {
+            if (player.gpuCount >= 1) {
+                player.gpuCount--;    // 通常のグラボを減らす
+                player.miningRigs++;  // マイニング機を増やす
+                recalculateMPS();     // 円の秒速が減るので再計算
+                updateUI();
+            }
+        }
+
+        // ビットコインをその時のレートで売る
+        function sellBtc() {
+            if (player.btc > 0) {
+                let gain = Math.floor(player.btc * currentBtcRate);
+                player.money += gain;
+                player.btc = 0;
+                updateUI();
+                alert(gain + " 円稼いだ！");
+            }
+        }
+
+        function recalculateMPS() {
+            player.mps = (player.cpuCount * 1) + (player.gpuCount * 15);
+        }
+
+        function switchUser(userId) {
+            saveGame();
+
+            currentUserId = userId;
+
+            for (let i = 1; i <= 3; i++){
+                document.getElementById('user-btn-' + i).classList.remove('active');
+            }
+            document.getElementById('user-btn-' + userId).classList.add('active');
+
+            loadGame(userId);
+        }
+
+        // --- 3. タイマー処理 ---
+        // 1秒ごとの自動収入（円 ＆ BTC）
+        setInterval(() => {
+            player.money += player.mps;
+            // マイニング機1台につき、毎秒 0.0001 BTC 貯まる
+            player.btc += player.miningRigs * 0.0001; 
+            updateUI();
+        }, 1000);
+
+        // 3秒ごとの定時セーブ（バックグラウンドでの消滅防止）
+        setInterval(() => {
+            saveGame();
+        }, 3000);
+
+        // チャートの乱高下
+        setInterval(() => {
+            let changePercent = (Math.random() * 0.65) - 0.30;
+            currentBtcRate = Math.floor(currentBtcRate * (1 + changePercent));
+            if (currentBtcRate < 1000) currentBtcRate = 1000;
+            if (currentBtcRate > 500000) currentBtcRate = 500000;
+
+            priceHistory.shift();
+            priceHistory.push(currentBtcRate);
+            btcChart.update();
+            updateUI();
+        }, 3000);
+
+        // --- 4. セーブ・ロード ---
+        function saveGame() {
+            let saveName = (currentUserId === 1) ? 'pcDarkShopSave' : 'pcDarkShopSave_user' + currentUserId;
+            localStorage.setItem(saveName, JSON.stringify(player));
+        }
+
+        function loadGame(userId) {
+            let saveName = (userId === 1) ? 'pcDarkShopSave' : 'pcDarkShopSave_user' + userId;
+            let savedData = localStorage.getItem(saveName);
+            
+            if (savedData) {
+                player = JSON.parse(savedData);
+                // 保険コード（新要素追加時のバグ防止）
+                if (player.btc === undefined) player.btc = 0;
+                if (player.miningRigs === undefined) player.miningRigs = 0;
+                if (player.clickPower === undefined) player.clickPower = 1;
+                recalculateMPS();
+            } else {
+                // データがない新規ユーザーの場合は初期化
+                player = createNewPlayerData();
+            }
+            updateUI();
+        }
+
+        function resetGame() {
+            if (confirm("ユーザー " + currentUserId + "本当にデータをリセットしますか？")) {
+                let saveName = (currentUserId === 1) ? 'pcDarkShopSave' : 'pcDarkShopSave_user' + currentUserId;
+                localStorage.removeItem(saveName);
+                player = createNewPlayerData();
+                updateUI();
+            }
+        }
+
+        // --- 5. 画面更新 ＆ グラフ初期化 ---
+        function initChart() {
+            let ctx = document.getElementById('btcChart').getContext('2d');
+            btcChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['', '', '', '', '', '', '', '', '', ''],
+                    datasets: [{
+                        label: 'BTC 価格 (円)',
+                        data: priceHistory,
+                        borderColor: '#ff9900',
+                        backgroundColor: 'rgba(255, 153, 0, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { x: { display: false }, y: { grid: { color: '#333' }, ticks: { color: '#ff9900' } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('money-text').innerText = player.money.toLocaleString();
+            document.getElementById('mps-text').innerText = player.mps;
+            document.getElementById('cpc-text').innerText = player.clickPower;
+            
+            document.getElementById('btc-text').innerText = player.btc.toFixed(4);
+            document.getElementById('rig-text').innerText = player.miningRigs;
+            document.getElementById('btc-rate-text').innerText = currentBtcRate.toLocaleString();
+
+            let cpuPrice = Math.floor(config.cpu.basePrice * Math.pow(1.15, player.cpuCount));
+            let gpuPrice = Math.floor(config.gpu.basePrice * Math.pow(1.15, player.gpuCount));
+            let casePrice = Math.floor(config.case.basePrice * Math.pow(1.15, player.caseCount));
+            
+            document.getElementById('btn-cpu').innerText = cpuPrice + "円 (" + player.cpuCount + ")";
+            document.getElementById('btn-gpu').innerText = gpuPrice + "円 (" + player.gpuCount + ")";
+            document.getElementById('btn-case').innerText = casePrice + "円 (" + player.caseCount + ")";
+
+            document.getElementById('btn-cpu').disabled = (player.money < cpuPrice);
+            document.getElementById('btn-gpu').disabled = (player.money < gpuPrice);
+            document.getElementById('btn-case').disabled = (player.money < casePrice);
+
+            document.getElementById('btn-to-mining').disabled = (player.gpuCount < 1);
+        }
+
+        // 起動処理
+        initChart();
+        loadGame(1);
+    </script>
+</body>
+</html>
