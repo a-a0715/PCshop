@@ -17,7 +17,7 @@
             padding: 20px;
         }
         h1 { border-bottom: 2px solid #00ffcc; padding-bottom: 10px; }
-        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 900px; }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 1000px; }
         .panel { background: #1e1e24; padding: 20px; border-radius: 8px; border: 1px solid #00ffcc; flex: 1; min-width: 350px; }
         
         .user-selector {
@@ -42,18 +42,19 @@
         }
         .btn-dark {
             background: #ff9900; color: #121214; border: none; padding: 10px 15px;
-            font-size: 1rem; font-weight: bold; border-radius: 5px; cursor: pointer;
+            font-size: 1rem; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 5px; width: 100%;
         }
         .btn-dark:disabled { background: #444; color: #888; cursor: not-allowed; }
         
+        /* 商品が増えたのでスクロールできるように追加 */
+        .shop-scroll { max-height: 550px; overflow-y: auto; padding-right: 5px; }
         .shop-item {
             background: #151518; border: 1px solid #555; padding: 12px;
             margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;
         }
-        .shop-btn { background: #ff0055; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .shop-btn { background: #ff0055; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; min-width: 110px; }
         .shop-btn:disabled { background: #444; color: #888; cursor: not-allowed; }        
         
-        /* チャートボックス */
         .chart-box { background: #151518; padding: 10px; border-radius: 5px; border: 1px solid #ff9900; margin-top: 15px; }
     </style>
 </head>
@@ -83,17 +84,51 @@
             </div>
 
             <h4>🔧 パーツショップ</h4>
-            <div class="shop-item">
-                <div><strong>中古のCPU</strong><br><small>効果: +1円/秒</small></div>
-                <button class="shop-btn" id="btn-cpu" onclick="buyItem('cpu')">10円 (0)</button>
-            </div>
-            <div class="shop-item">
-                <div><strong>普通のグラボ</strong><br><small>効果: +15円/秒</small></div>
-                <button class="shop-btn" id="btn-gpu" onclick="buyItem('gpu')">150円 (0)</button>
-            </div>
-            <div class="shop-item">
-                <div><strong>光るLEDケース</strong><br><small>効果: クリックパワー+5円</small></div>
-                <button class="shop-btn" id="btn-case" onclick="buyItem('case')">500円 (0)</button>
+            <div class="shop-scroll">
+                <div class="shop-item">
+                    <div><strong>USBメモリ 💾</strong><br><small>効果: +0.2円/秒</small></div>
+                    <button class="shop-btn" id="btn-usb" onclick="buyItem('usb')">4円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>中古のCPU</strong><br><small>効果: +1円/秒</small></div>
+                    <button class="shop-btn" id="btn-cpu" onclick="buyItem('cpu')">10円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>3ボタンマウス 🖱️</strong><br><small>効果: クリックパワー+2円</small></div>
+                    <button class="shop-btn" id="btn-mouse3" onclick="buyItem('mouse3')">40円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>大容量HDD 📀</strong><br><small>効果: +5円/秒</small></div>
+                    <button class="shop-btn" id="btn-hdd" onclick="buyItem('hdd')">60円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>普通のグラボ</strong><br><small>効果: +15円/秒</small></div>
+                    <button class="shop-btn" id="btn-gpu" onclick="buyItem('gpu')">150円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>5ボタンマウス 🖲️</strong><br><small>効果: クリックパワー+12円</small></div>
+                    <button class="shop-btn" id="btn-mouse5" onclick="buyItem('mouse5')">350円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>光るLEDケース</strong><br><small>効果: クリックパワー+5円</small></div>
+                    <button class="shop-btn" id="btn-case" onclick="buyItem('case')">500円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>高速SSD ⚡</strong><br><small>効果: +45円/秒</small></div>
+                    <button class="shop-btn" id="btn-ssd" onclick="buyItem('ssd')">900円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>謎の冷却液 🧪</strong><br><small>効果: クリックパワー+25円</small></div>
+                    <button class="shop-btn" id="btn-coolant" onclick="buyItem('coolant')">2,000円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>静音キーボード ⌨️</strong><br><small>効果: クリックパワー+60円</small></div>
+                    <button class="shop-btn" id="btn-keyboard" onclick="buyItem('keyboard')">6,500円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>量子コンピューター 🌌</strong><br><small>効果: +500円/秒</small></div>
+                    <button class="shop-btn" id="btn-quantum" onclick="buyItem('quantum')">50,000円 (0)</button>
+                </div>
             </div>
         </div>
 
@@ -101,11 +136,14 @@
             <h3>マイニング工場</h3>
             <div class="btc-money"><span id="btc-text">0.0000</span> BTC</div>
             <div style="margin-top: 5px; color: #ff9900;">稼働中のリグ: <span id="rig-text">0</span> 台</div>
-            <div style="color: #ffaa55;">現在のBTC価格: 1 BTC = <span id="btc-rate-text">10000</span> 円</div>
+            <div style="color: #00ffcc;">自動売却リグ: <span id="auto-rig-text">0</span> 台</div>
+            <div style="color: #ffaa55; margin-top: 5px;">現在のBTC価格: 1 BTC = <span id="btc-rate-text">10000</span> 円</div>
             <br>
             
-            <button class="btn-dark" id="btn-to-mining" onclick="convertGpuToRig()">持っているグラボを1枚マイニングに回す</button>
-            <button class="btn-dark" style="background: #00ffcc; margin-left: 5px;" onclick="sellBtc()">BTCをすべて現金化する</button>
+            <button class="btn-dark" id="btn-to-mining" onclick="convertGpuToRig()">グラボ1枚 ➔ 【マイニングリグ】(通常効率)</button>
+            <button class="btn-dark" id="btn-to-auto-hdd" style="background: #00ccff;" onclick="convertHddToAutoRig()">HDD1台 ➔ 【自動売却リグ】(換金効率:低)</button>
+            <button class="btn-dark" id="btn-to-auto-ssd" style="background: #0077ff; color: white;" onclick="convertSsdToAutoRig()">⚡SSD1台 ➔ 【高速自動売却リグ】(換金効率:高)</button>
+            <button class="btn-dark" style="background: #00ffcc;" onclick="sellBtc()">BTCをすべて現金化する</button>
 
             <div class="chart-box">
                 <canvas id="btcChart" style="width:100%; height:180px;"></canvas>
@@ -117,28 +155,33 @@
         // --- 1. ゲームデータ ---
         function createNewPlayerData() {
             return {
-                money: 0,
-                mps: 0,
-                clickPower: 1, 
-                cpuCount: 0,
-                gpuCount: 0,
-                caseCount: 0,
-                btc: 0,         // 所持ビットコイン
-                miningRigs: 0   // マイニングに回したグラボの数
+                money: 0, mps: 0, clickPower: 1, 
+                usbCount: 0, cpuCount: 0, mouse3Count: 0, hddCount: 0, gpuCount: 0, 
+                mouse5Count: 0, caseCount: 0, ssdCount: 0, coolantCount: 0, keyboardCount: 0, quantumCount: 0,
+                btc: 0, miningRigs: 0, autoRigsHdd: 0, autoRigsSsd: 0
             };
         }
 
         let player = createNewPlayerData();
         let currentUserId = 1;
 
+        // 全11製品の設定（ここに新商品を追加！）
         const config = {
+            usb: { basePrice: 4, mpsEffect: 0.2, clickEffect: 0 },
             cpu: { basePrice: 10, mpsEffect: 1, clickEffect: 0 },
+            mouse3: { basePrice: 40, mpsEffect: 0, clickEffect: 2 },
+            hdd: { basePrice: 60, mpsEffect: 5, clickEffect: 0 },
             gpu: { basePrice: 150, mpsEffect: 15, clickEffect: 0 },
-            case: { basePrice: 500, mpsEffect: 0, clickEffect: 5 } 
+            mouse5: { basePrice: 350, mpsEffect: 0, clickEffect: 12 },
+            case: { basePrice: 500, mpsEffect: 0, clickEffect: 5 },
+            ssd: { basePrice: 900, mpsEffect: 45, clickEffect: 0 },
+            coolant: { basePrice: 2000, mpsEffect: 0, clickEffect: 25 },
+            keyboard: { basePrice: 6500, mpsEffect: 0, clickEffect: 60 },
+            quantum: { basePrice: 50000, mpsEffect: 500, clickEffect: 0 }
         };
 
-        let currentBtcRate = 10000; // 初期価格
-        let priceHistory = [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]; // グラフ用データ
+        let currentBtcRate = 10000;
+        let priceHistory = [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000];
         let btcChart;
 
         // --- 2. メインロジック ---
@@ -153,23 +196,39 @@
                 player.money -= price;
                 player[type + 'Count']++;
                 recalculateMPS();
-                if (config[type].clickEffect > 0) player.clickPower += config[type].clickEffect;
+                recalculateClickPower();
                 updateUI();
                 saveGame();
             }
         }
 
-        // グラボを裏のマイニング機に転用する
         function convertGpuToRig() {
             if (player.gpuCount >= 1) {
-                player.gpuCount--;    // 通常のグラボを減らす
-                player.miningRigs++;  // マイニング機を増やす
-                recalculateMPS();     // 円の秒速が減るので再計算
+                player.gpuCount--;
+                player.miningRigs++;
+                recalculateMPS();
                 updateUI();
             }
         }
 
-        // ビットコインをその時のレートで売る
+        function convertHddToAutoRig() {
+            if (player.hddCount >= 1) {
+                player.hddCount--;
+                player.autoRigsHdd++;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
+        function convertSsdToAutoRig() {
+            if (player.ssdCount >= 1) {
+                player.ssdCount--;
+                player.autoRigsSsd++;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
         function sellBtc() {
             if (player.btc > 0) {
                 let gain = Math.floor(player.btc * currentBtcRate);
@@ -181,37 +240,50 @@
         }
 
         function recalculateMPS() {
-            player.mps = (player.cpuCount * 1) + (player.gpuCount * 15);
+            player.mps = (player.usbCount * config.usb.mpsEffect) +
+                         (player.cpuCount * config.cpu.mpsEffect) + 
+                         (player.hddCount * config.hdd.mpsEffect) + 
+                         (player.gpuCount * config.gpu.mpsEffect) +
+                         (player.ssdCount * config.ssd.mpsEffect) +
+                         (player.quantumCount * config.quantum.mpsEffect);
+            player.mps = Math.round(player.mps * 10) / 10;
+        }
+
+        function recalculateClickPower() {
+            player.clickPower = 1 + (player.mouse3Count * config.mouse3.clickEffect) +
+                                    (player.mouse5Count * config.mouse5.clickEffect) +
+                                    (player.caseCount * config.case.clickEffect) + 
+                                    (player.coolantCount * config.coolant.clickEffect) +
+                                    (player.keyboardCount * config.keyboard.clickEffect);
         }
 
         function switchUser(userId) {
             saveGame();
-
             currentUserId = userId;
-
             for (let i = 1; i <= 3; i++){
                 document.getElementById('user-btn-' + i).classList.remove('active');
             }
             document.getElementById('user-btn-' + userId).classList.add('active');
-
             loadGame(userId);
         }
 
         // --- 3. タイマー処理 ---
-        // 1秒ごとの自動収入（円 ＆ BTC）
         setInterval(() => {
             player.money += player.mps;
-            // マイニング機1台につき、毎秒 0.0001 BTC 貯まる
-            player.btc += player.miningRigs * 0.0001; 
+            player.btc += (player.miningRigs * 0.0001) + (player.autoRigsHdd * 0.0001) + (player.autoRigsSsd * 0.0008); 
+
+            let totalAutoSpeed = (player.autoRigsHdd * 0.0001) + (player.autoRigsSsd * 0.0008);
+            if (totalAutoSpeed > 0 && player.btc > 0) {
+                if (totalAutoSpeed > player.btc) totalAutoSpeed = player.btc;
+                player.money += Math.floor(totalAutoSpeed * currentBtcRate);
+                player.btc -= totalAutoSpeed;
+            }
+
             updateUI();
         }, 1000);
 
-        // 3秒ごとの定時セーブ（バックグラウンドでの消滅防止）
-        setInterval(() => {
-            saveGame();
-        }, 3000);
+        setInterval(() => { saveGame(); }, 3000);
 
-        // チャートの乱高下
         setInterval(() => {
             let changePercent = (Math.random() * 0.65) - 0.30;
             currentBtcRate = Math.floor(currentBtcRate * (1 + changePercent));
@@ -235,21 +307,20 @@
             let savedData = localStorage.getItem(saveName);
             
             if (savedData) {
-                player = JSON.parse(savedData);
-                // 保険コード（新要素追加時のバグ防止）
-                if (player.btc === undefined) player.btc = 0;
-                if (player.miningRigs === undefined) player.miningRigs = 0;
-                if (player.clickPower === undefined) player.clickPower = 1;
+                let loadedData = JSON.parse(savedData);
+                player = createNewPlayerData();
+                Object.assign(player, loadedData); 
+
                 recalculateMPS();
+                recalculateClickPower();
             } else {
-                // データがない新規ユーザーの場合は初期化
                 player = createNewPlayerData();
             }
             updateUI();
         }
 
         function resetGame() {
-            if (confirm("ユーザー " + currentUserId + "本当にデータをリセットしますか？")) {
+            if (confirm("ユーザー " + currentUserId + " のデータを本当にリセットしますか？")) {
                 let saveName = (currentUserId === 1) ? 'pcDarkShopSave' : 'pcDarkShopSave_user' + currentUserId;
                 localStorage.removeItem(saveName);
                 player = createNewPlayerData();
@@ -283,30 +354,32 @@
         }
 
         function updateUI() {
-            document.getElementById('money-text').innerText = player.money.toLocaleString();
+            document.getElementById('money-text').innerText = Math.floor(player.money).toLocaleString();
             document.getElementById('mps-text').innerText = player.mps;
             document.getElementById('cpc-text').innerText = player.clickPower;
             
             document.getElementById('btc-text').innerText = player.btc.toFixed(4);
             document.getElementById('rig-text').innerText = player.miningRigs;
+            
+            let totalAutoRigs = (player.autoRigsHdd || 0) + (player.autoRigsSsd || 0);
+            document.getElementById('auto-rig-text').innerText = totalAutoRigs + " 台 (HDD:" + (player.autoRigsHdd || 0) + " / SSD:" + (player.autoRigsSsd || 0) + ")";
             document.getElementById('btc-rate-text').innerText = currentBtcRate.toLocaleString();
 
-            let cpuPrice = Math.floor(config.cpu.basePrice * Math.pow(1.15, player.cpuCount));
-            let gpuPrice = Math.floor(config.gpu.basePrice * Math.pow(1.15, player.gpuCount));
-            let casePrice = Math.floor(config.case.basePrice * Math.pow(1.15, player.caseCount));
-            
-            document.getElementById('btn-cpu').innerText = cpuPrice + "円 (" + player.cpuCount + ")";
-            document.getElementById('btn-gpu').innerText = gpuPrice + "円 (" + player.gpuCount + ")";
-            document.getElementById('btn-case').innerText = casePrice + "円 (" + player.caseCount + ")";
+            for (let type in config) {
+                let currentCount = player[type + 'Count'] || 0;
+                let price = Math.floor(config[type].basePrice * Math.pow(1.15, currentCount));
+                let btn = document.getElementById('btn-' + type);
+                if (btn) {
+                    btn.innerText = price.toLocaleString() + "円 (" + currentCount + ")";
+                    btn.disabled = (player.money < price);
+                }
+            }
 
-            document.getElementById('btn-cpu').disabled = (player.money < cpuPrice);
-            document.getElementById('btn-gpu').disabled = (player.money < gpuPrice);
-            document.getElementById('btn-case').disabled = (player.money < casePrice);
-
-            document.getElementById('btn-to-mining').disabled = (player.gpuCount < 1);
+            document.getElementById('btn-to-mining').disabled = ((player.gpuCount || 0) < 1);
+            document.getElementById('btn-to-auto-hdd').disabled = ((player.hddCount || 0) < 1);
+            document.getElementById('btn-to-auto-ssd').disabled = ((player.ssdCount || 0) < 1);
         }
 
-        // 起動処理
         initChart();
         loadGame(1);
     </script>
