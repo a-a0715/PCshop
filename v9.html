@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCショップ（名前シンプルすぎだろ）</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #121214;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            transition: background-color 1s ease, color 1s ease;
+        }
+        h1 { border-bottom: 2px solid #00ffcc; padding-bottom: 10px; }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 1000px; }
+        .panel { background: #1e1e24; padding: 20px; border-radius: 8px; border: 1px solid #00ffcc; flex: 1; min-width: 350px; }
+        
+        .puzzle-panel {
+            background: #111116; padding: 20px; border-radius: 8px; border: 2px solid #ff00ff; 
+            flex: 1; min-width: 320px; max-width: 400px; display: none;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+            user-select: none;
+            touch-action: none;
+        }
+        .puzzle-board {
+            width: 180px; height: 360px; background: #000; border: 3px solid #ff00ff;
+            margin: 10px auto; display: grid; grid-template-rows: repeat(12, 1fr); grid-template-columns: repeat(6, 1fr);
+            position: relative;
+        }
+        .cell { border: 1px solid #222; border-radius: 50%; width: 100%; height: 100%; box-sizing: border-box; }
+        .puyo-1 { background: #ff3333; box-shadow: inset 0 0 8px #ff8888, 0 0 5px #ff3333; }
+        .puyo-2 { background: #3333ff; box-shadow: inset 0 0 8px #8888ff, 0 0 5px #3333ff; }
+        .puyo-3 { background: #33ff33; box-shadow: inset 0 0 8px #88ff88, 0 0 5px #33ff33; }
+        .puyo-4 { background: #ffff33; box-shadow: inset 0 0 8px #ffff88, 0 0 5px #ffff33; }
+        
+        .puzzle-btn-container { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
+        .puzzle-ctrl-btn { background: #333; color: #ff00ff; border: 1px solid #ff00ff; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1; }
+
+        .admin-box {
+            width: 100%; max-width: 1000px; margin-bottom: 20px; background: #222227; 
+            padding: 12px; border-radius: 8px; border: 1px solid #555; text-align: center;
+        }
+        .admin-input {
+            background: #121214; color: #fff; border: 1px solid #00ffcc; 
+            padding: 5px 10px; border-radius: 4px; width: 80px; text-align: center; font-size: 1rem;
+        }
+        .admin-btn {
+            background: #333; color: #00ffcc; border: 1px solid #00ffcc; 
+            padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .debug-panel {
+            margin-top: 10px; padding: 15px; background: #2a1b1b; 
+            border-radius: 8px; border: 2px dotted #ff3333; color: #ff8888; display: none;
+        }
+        .debug-btn {
+            background: #ff3333; color: white; border: none; padding: 6px 12px; 
+            margin: 5px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem;
+        }
+        .debug-btn:hover { background: #ff5555; }
+
+        .user-selector {
+            background: #25252d; padding: 10px 20px; border-radius: 8px;
+            border: 1px solid #00ffcc; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+        }
+        .user-btn {
+            background: #333; color: #fff; border: 1px solid #555; padding: 8px 15px;
+            border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .user-btn.active {
+            background: #00ffcc; color: #121214; border-color: #00ffcc;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+
+        .money { font-size: 1.8rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px #00ffcc; } 
+        .btc-money { font-size: 1.8rem; font-weight: bold; color: #ff9900; text-shadow: 0 0 10px #ff9900; } 
+
+        .btn-click {
+            background: #00ffcc; color: #121214; border: none; padding: 12px 25px;
+            font-size: 1.1rem; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; margin-bottom: 10px;
+        }
+        .btn-dark {
+            background: #ff9900; color: #121214; border: none; padding: 10px 15px;
+            font-size: 1rem; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 5px; width: 100%;
+        }
+        .btn-dark:disabled { background: #444; color: #888; cursor: not-allowed; }
+        
+        .shop-scroll { max-height: 550px; overflow-y: auto; padding-right: 5px; }
+        .shop-item {
+            background: #151518; border: 1px solid #555; padding: 12px;
+            margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .shop-btn { background: #ff0055; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; min-width: 110px; }
+        .shop-btn:disabled { background: #444; color: #888; cursor: not-allowed; }        
+        
+        .chart-box { background: #151518; padding: 10px; border-radius: 5px; border: 1px solid #ff9900; margin-top: 15px; }
+
+        /* 季節・カウントダウン演出用の上部通知バー */
+        .event-banner {
+            width: 100%; max-width: 1000px; padding: 10px; margin-bottom: 15px;
+            border-radius: 8px; text-align: center; font-weight: bold; font-size: 1.1rem;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2); display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ELECTRONICS SHOP</h1>
+
+    <div id="event-banner" class="event-banner"></div>
+
+    <div style="margin-bottom: 15px;">
+        <span>開発者モード（暗証番号）: </span>
+        <input type="password" id="pass-input" class="admin-input" placeholder="******" maxlength="8">
+        <button class="admin-btn" onclick="checkPassword()">解除</button>
+        <button class="admin-btn" style="color: #ff00ff; border-color: #ff00ff; margin-left: 10px;" onclick="togglePuzzlePanel()">異国の文化を遊ぶ</button>
+    </div>
+
+    <div class="debug-panel" id="secret-debug-panel">
+        <strong>テストモード起動中</strong><br>
+        <button class="debug-btn" onclick="debugAddMoney()">お金を１億円増やす</button>
+        <button class="debug-btn" onclick="debugAddBtc()">BTCを1000枚増やす</button>
+        <button class="debug-btn" onclick="debugAddMps()">秒速（mps）+100,000</button>
+        <button class="debug-btn" onclick="debugChangeBtcRate()">今すぐBTC価格を変動</button>
+    </div>
+
+    <div class="user-selector">
+        <span>ユーザー選択:</span>
+        <button id="user-btn-1" class="user-btn active" onclick="switchUser(1)">ユーザー 1</button>
+        <button id="user-btn-2" class="user-btn" onclick="switchUser(2)">ユーザー 2</button>
+        <button id="user-btn-3" class="user-btn" onclick="switchUser(3)">ユーザー 3</button>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h3>🏢 PCショップ</h3>
+            <div class="money"><span id="money-text">0</span> 円</div>
+            <div style="margin-top: 5px;">自動秒速: <span id="mps-text">0</span> 円/秒 <span id="season-bonus-text" style="color:#ff3366; font-weight:bold;"></span></div>
+            <div style="color: #ffff00;">クリックパワー: <span id="cpc-text">1</span> 円</div>
+            <br>
+            <button class="btn-click" onclick="clickMain()">パーツを組み立てる！</button>
+            
+            <div style="margin-bottom: 15px;">
+                <button onclick="saveGame()" style="background: #333; color: #fff; border: 1px solid #fff; padding: 5px 10px; cursor: pointer;">セーブ</button>
+                <button onclick="resetGame()" style="background: #500; color: #ff8888; border: 1px solid #ff8888; padding: 5px 10px; cursor: pointer; margin-left: 5px;">リセット</button>
+            </div>
+
+            <h4>🔧 パーツショップ</h4>
+            <div class="shop-scroll">
+                <div class="shop-item">
+                    <div><strong>USBメモリ 💾</strong><br><small>効果: +0.2円/秒</small></div>
+                    <button class="shop-btn" id="btn-usb" onclick="buyItem('usb')">4円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>中古のCPU</strong><br><small>効果: +1円/秒</small></div>
+                    <button class="shop-btn" id="btn-cpu" onclick="buyItem('cpu')">10円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>3ボタンマウス 🖱️</strong><br><small>効果: クリックパワー+2円</small></div>
+                    <button class="shop-btn" id="btn-mouse3" onclick="buyItem('mouse3')">40円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>大容量HDD 📀</strong><br><small>効果: +5円/秒</small></div>
+                    <button class="shop-btn" id="btn-hdd" onclick="buyItem('hdd')">60円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>普通のグラボ</strong><br><small>効果: +15円/秒</small></div>
+                    <button class="shop-btn" id="btn-gpu" onclick="buyItem('gpu')">150円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>5ボタンマウス 🖲️</strong><br><small>効果: クリックパワー+12円</small></div>
+                    <button class="shop-btn" id="btn-mouse5" onclick="buyItem('mouse5')">350円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>光るLEDケース</strong><br><small>効果: クリックパワー+5円</small></div>
+                    <button class="shop-btn" id="btn-case" onclick="buyItem('case')">500円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>高速SSD ⚡</strong><br><small>効果: +45円/秒</small></div>
+                    <button class="shop-btn" id="btn-ssd" onclick="buyItem('ssd')">900円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>謎の冷却液 🧪</strong><br><small>効果: クリックパワー+25円</small></div>
+                    <button class="shop-btn" id="btn-coolant" onclick="buyItem('coolant')">2,000円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>静音キーボード ⌨️</strong><br><small>効果: クリックパワー+60円</small></div>
+                    <button class="shop-btn" id="btn-keyboard" onclick="buyItem('keyboard')">6,500円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>量子コンピューター 🌌</strong><br><small>効果: +500円/秒</small></div>
+                    <button class="shop-btn" id="btn-quantum" onclick="buyItem('quantum')">50,000円 (0)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="puzzle-panel" id="puzzle-box">
+            <h3 style="color: #ff00ff; text-align: center; margin-top:0;">異国の文化</h3>
+            <div style="font-size:0.85rem; text-align:center; color:#aaa;">
+                連鎖数×５０円×クリックパワー<br>
+                <span style="color:#00ffcc;">スマホ：左右スラで移動 / タップで回転</span>
+            </div>
+            <div id="combo-alert" style="color: #ffff00; font-weight:bold; text-align:center; height:20px; margin-top:5px;"></div>
+
+            <div class="puzzle-board" id="board-grid"></div>
+
+            <div class="puzzle-btn-container">
+                <button class="puzzle-ctrl-btn" onclick="movePuyo(-1)">左</button>
+                <button class="puzzle-ctrl-btn" onclick="rotatePuyo()">回転</button>
+                <button class="puzzle-ctrl-btn" onclick="movePuyo(1)">右</button>
+                <button class="puzzle-ctrl-btn" onclick="dropPuyoFast()">下</button>
+            </div>
+        </div>
+
+        <div class="panel" style="border-color: #ff9900;">
+            <h3>マイニング工場</h3>
+            <div class="btc-money"><span id="btc-text">0.0000</span> BTC</div>
+            <div style="margin-top: 5px; color: #ff9900;">稼働中のリグ: <span id="rig-text">0</span> 台</div>
+            <div style="color: #00ffcc;">自動売却リグ: <span id="auto-rig-text">0</span> 台</div>
+            <div style="color: #ffaa55; margin-top: 5px;">現在のBTC価格: 1 BTC = <span id="btc-rate-text">10000</span> 円</div>
+            <br>
+            
+            <button class="btn-dark" id="btn-to-mining" onclick="convertGpuToRig()">グラボ1枚 ➔ 【マイニングリグ】(通常効率)</button>
+            <button class="btn-dark" id="btn-to-auto-hdd" style="background: #00ccff;" onclick="convertHddToAutoRig()">HDD1台 ➔ 【自動売却リグ】(換金効率:低)</button>
+            <button class="btn-dark" id="btn-to-auto-ssd" style="background: #0077ff; color: white;" onclick="convertSsdToAutoRig()">⚡SSD1台 ➔ 【高速自動売却リグ】(換金効率:高)</button>
+            <button class="btn-dark" style="background: #00ffcc;" onclick="sellBtc()">BTCをすべて現金化する</button>
+
+            <div class="chart-box">
+                <canvas id="btcChart" style="width:100%; height:180px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. ゲームデータ ---
+        function createNewPlayerData() {
+            return {
+                money: 0, mps: 0, clickPower: 1, 
+                usbCount: 0, cpuCount: 0, mouse3Count: 0, hddCount: 0, gpuCount: 0, 
+                mouse5Count: 0, caseCount: 0, ssdCount: 0, coolantCount: 0, keyboardCount: 0, quantumCount: 0,
+                btc: 0, miningRigs: 0, autoRigsHdd: 0, autoRigsSsd: 0, debugMpsBonus: 0
+            };
+        }
+
+        let player = createNewPlayerData();
+        let currentUserId = 1;
+
+        // 時候・お祝い用のイベント倍率（デフォルトは1倍）
+        let eventMultiplier = 1.0; 
+
+        const config = {
+            usb: { basePrice: 4, mpsEffect: 0.2, clickEffect: 0 },
+            cpu: { basePrice: 10, mpsEffect: 1, clickEffect: 0 },
+            mouse3: { basePrice: 40, mpsEffect: 0, clickEffect: 2 },
+            hdd: { basePrice: 60, mpsEffect: 5, clickEffect: 0 },
+            gpu: { basePrice: 150, mpsEffect: 15, clickEffect: 0 },
+            mouse5: { basePrice: 350, mpsEffect: 0, clickEffect: 12 },
+            case: { basePrice: 500, mpsEffect: 0, clickEffect: 5 },
+            ssd: { basePrice: 900, mpsEffect: 45, clickEffect: 0 },
+            coolant: { basePrice: 2000, mpsEffect: 0, clickEffect: 25 },
+            keyboard: { basePrice: 6500, mpsEffect: 0, clickEffect: 60 },
+            quantum: { basePrice: 50000, mpsEffect: 500, clickEffect: 0 }
+        };
+
+        let currentBtcRate = 10000;
+        let priceHistory = [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000];
+        let btcChart;
+
+        const ROWS = 12;
+        const COLS = 6;
+        let grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let currentPiece = null;
+        let isProcessing = false;
+        let puzzleInterval = null;
+
+        function togglePuzzlePanel() {
+            let pBox = document.getElementById('puzzle-box');
+            if (pBox.style.display === "none" || pBox.style.display === "") {
+                pBox.style.display = "block";
+                initPuzzle();
+            } else {
+                pBox.style.display = "none";
+                clearInterval(puzzleInterval);
+            }
+        }
+
+        function initPuzzle() {
+            grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            isProcessing = false;
+            spawnPuyo();
+            renderBoard();
+            clearInterval(puzzleInterval);
+            puzzleInterval = setInterval(() => { if (!isProcessing) movePuyoDown(); }, 1000);
+        }
+
+        function spawnPuyo() {
+            currentPiece = {
+                x: 2, y: 0,
+                color1: Math.floor(Math.random() * 4) + 1,
+                color2: Math.floor(Math.random() * 4) + 1,
+                rot: 0
+            };
+            if (grid[0][2] !== 0 || grid[1][2] !== 0) {
+                grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            }
+        }
+
+        function getPiecePositions(piece) {
+            let x2 = piece.x; let y2 = piece.y;
+            if (piece.rot === 0) y2--;
+            if (piece.rot === 1) x2++;
+            if (piece.rot === 2) y2++;
+            if (piece.rot === 3) x2--;
+            return { x1: piece.x, y1: piece.y, x2: x2, y2: y2 };
+        }
+
+        function isValidMove(x, y, rot) {
+            let temp = { x: x, y: y, rot: rot };
+            let pos = getPiecePositions(temp);
+            if (pos.x1 < 0 || pos.x1 >= COLS || pos.y1 < 0 || pos.y1 >= ROWS) return false;
+            if (pos.x2 < 0 || pos.x2 >= COLS || pos.y2 < 0 || pos.y2 >= ROWS) return false;
+            if (grid[pos.y1][pos.x1] !== 0) return false;
+            if (grid[pos.y2][pos.x2] !== 0) return false;
+            return true;
+        }
+
+        function movePuyo(dir) {
+            if (isProcessing || !currentPiece) return;
+            if (isValidMove(currentPiece.x + dir, currentPiece.y, currentPiece.rot)) {
+                currentPiece.x += dir; renderBoard();
+            }
+        }
+
+        function rotatePuyo() {
+            if (isProcessing || !currentPiece) return;
+            let nextRot = (currentPiece.rot + 1) % 4;
+            if (isValidMove(currentPiece.x, currentPiece.y, nextRot)) {
+                currentPiece.rot = nextRot; renderBoard();
+            }
+        }
+
+        function dropPuyoFast() { if (isProcessing || !currentPiece) return; movePuyoDown(); }
+
+        function movePuyoDown() {
+            if (isProcessing || !currentPiece) return;
+            if (isValidMove(currentPiece.x, currentPiece.y + 1, currentPiece.rot)) {
+                currentPiece.y++; renderBoard();
+            } else { lockPiece(); }
+        }
+
+        function lockPiece() {
+            isProcessing = true;
+            let pos = getPiecePositions(currentPiece);
+            if (pos.y1 >= 0) grid[pos.y1][pos.x1] = currentPiece.color1;
+            if (pos.y2 >= 0) grid[pos.y2][pos.x2] = currentPiece.color2;
+            currentPiece = null;
+            processChains(1);
+        }
+
+        function processChains(chainCount) {
+            let dropped = applyGravity();
+            if (dropped) {
+                renderBoard();
+                setTimeout(() => { processChains(chainCount); }, 200); return;
+            }
+            let matches = checkMatches();
+            if (matches.length > 0) {
+                for (let cell of matches) grid[cell.y][cell.x] = 0;
+                let reward = chainCount * 50 * player.clickPower;
+                player.money += reward;
+                document.getElementById('combo-alert').innerText = chainCount + "連鎖！ +" + reward.toLocaleString() + "円";
+                updateUI(); renderBoard();
+                setTimeout(() => {
+                    document.getElementById('combo-alert').innerText = "";
+                    processChains(chainCount + 1);
+                }, 400);
+            } else {
+                isProcessing = false; spawnPuyo(); renderBoard();
+            }
+        }
+
+        function applyGravity() {
+            let moved = false;
+            for (let x = 0; x < COLS; x++) {
+                for (let y = ROWS - 2; y >= 0; y--) {
+                    if (grid[y][x] !== 0 && grid[y+1][x] === 0) {
+                        grid[y+1][x] = grid[y][x]; grid[y][x] = 0; moved = true;
+                    }
+                }
+            }
+            return moved;
+        }
+
+        function checkMatches() {
+            let visited = Array(ROWS).fill().map(() => Array(COLS).fill(false));
+            let allMatches = [];
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (grid[y][x] !== 0 && !visited[y][x]) {
+                        let targetColor = grid[y][x];
+                        let connected = []; let queue = [{x: x, y: y}]; visited[y][x] = true;
+                        while(queue.length > 0) {
+                            let curr = queue.shift(); connected.push(curr);
+                            let dirs = [{x:0, y:1}, {x:0, y:-1}, {x:1, y:0}, {x:-1, y:0}];
+                            for(let d of dirs) {
+                                let nx = curr.x + d.x; let ny = curr.y + d.y;
+                                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                                    if (!visited[ny][nx] && grid[ny][nx] === targetColor) {
+                                        visited[ny][nx] = true; queue.push({x: nx, y: ny});
+                                    }
+                                }
+                            }
+                        }
+                        if (connected.length >= 4) allMatches = allMatches.concat(connected);
+                    }
+                }
+            }
+            return allMatches;
+        }
+
+        function renderBoard() {
+            let boardGrid = document.getElementById('board-grid');
+            if (!boardGrid) return;
+            boardGrid.innerHTML = "";
+            let displayGrid = Array(ROWS).fill().map((_, y) => [...grid[y]]);
+            if (currentPiece) {
+                let pos = getPiecePositions(currentPiece);
+                if (pos.y1 >= 0 && pos.y1 < ROWS && pos.x1 >= 0 && pos.x1 < COLS) displayGrid[pos.y1][pos.x1] = currentPiece.color1;
+                if (pos.y2 >= 0 && pos.y2 < ROWS && pos.x2 >= 0 && pos.x2 < COLS) displayGrid[pos.y2][pos.x2] = currentPiece.color2;
+            }
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    let cellDiv = document.createElement('div');
+                    cellDiv.className = "cell";
+                    if (displayGrid[y][x] > 0) cellDiv.classList.add('puyo-' + displayGrid[y][x]);
+                    boardGrid.appendChild(cellDiv);
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            let pBox = document.getElementById('puzzle-box');
+            if (!pBox || pBox.style.display !== "block" || isProcessing) return;
+            if (e.key === "ArrowLeft") { movePuyo(-1); e.preventDefault(); }
+            if (e.key === "ArrowRight") { movePuyo(1); e.preventDefault(); }
+            if (e.key === "ArrowUp") { rotatePuyo(); e.preventDefault(); }
+            if (e.key === "ArrowDown") { movePuyoDown(); e.preventDefault();}
+        });
+
+        let touchStartX = 0; let touchStartY = 0;
+        let touchEndX = 0; let touchEndY = 0;
+        const puzzlePanel = document.getElementById('puzzle-box');
+
+        puzzlePanel.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, {passive: true});
+
+        puzzlePanel.addEventListener('touchend', (e) => {
+            if (isProcessing) return;
+            touchEndX = e.changedTouches[0].clientX;
+            touchEndY = e.changedTouches[0].clientY;
+
+            let diffX = touchEndX - touchStartX;
+            let diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > 30 || Math.abs(diffY) > 30) {
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX > 0) movePuyo(1);
+                    else movePuyo(-1);
+                } else {
+                    if (diffY > 0) dropPuyoFast();
+                }
+            } else {
+                rotatePuyo();
+            }
+        });
+
+        function checkPassword() {
+            let input = document.getElementById('pass-input').value;
+            let panel = document.getElementById('secret-debug-panel');
+
+            if (input === "0715ao") {
+                panel.style.display = "block";
+                alert("開発者モードを解除しました！");
+            } else {
+                panel.style.display = "none";
+                alert("暗証番号が違います");
+            }
+        }
+
+        function debugAddMoney() {
+            player.money += 100000000;
+            updateUI();
+        }
+        function debugAddBtc() {
+            player.btc += 1000;
+            updateUI();
+        }
+        function debugAddMps() {
+            player.debugMpsBonus = (player.debugMpsBonus || 0) + 100000;
+            recalculateMPS();
+            updateUI();
+        }
+        function debugChangeBtcRate() {
+            triggerBtcFluctuation();
+        }
+
+        function triggerBtcFluctuation() {
+            let changePercent = (Math.random() * 0.65) - 0.30;
+            currentBtcRate = Math.floor(currentBtcRate * (1 + changePercent));
+            if (currentBtcRate < 1000) currentBtcRate = 1000;
+            if (currentBtcRate > 500000) currentBtcRate = 500000;
+
+            priceHistory.shift();
+            priceHistory.push(currentBtcRate);
+            if (btcChart) btcChart.update();
+            updateUI();
+        }
+
+        // --- 2. メインロジック ---
+        function clickMain() {
+            player.money += player.clickPower;
+            updateUI();
+        }
+
+        function buyItem(type) {
+            let currentCount = player[type + 'Count'] || 0;
+            let price = Math.floor(config[type].basePrice * Math.pow(1.15, currentCount));
+            if (player.money >= price) {
+                player.money -= price;
+                player[type + 'Count'] = currentCount + 1;
+                recalculateMPS();
+                recalculateClickPower();
+                updateUI();
+                saveGame();
+            }
+        }
+
+        function convertGpuToRig() {
+            if ((player.gpuCount || 0) >= 1) {
+                player.gpuCount--;
+                player.miningRigs = (player.miningRigs || 0) + 1;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
+        function convertHddToAutoRig() {
+            if ((player.hddCount || 0) >= 1) {
+                player.hddCount--;
+                player.autoRigsHdd = (player.autoRigsHdd || 0) + 1;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
+        function convertSsdToAutoRig() {
+            if ((player.ssdCount || 0) >= 1) {
+                player.ssdCount--;
+                player.autoRigsSsd = (player.autoRigsSsd || 0) + 1;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
+        function sellBtc() {
+            if (player.btc > 0) {
+                let gain = Math.floor(player.btc * currentBtcRate);
+                player.money += gain;
+                player.btc = 0;
+                updateUI();
+                alert(gain + " 円稼いだ！");
+            }
+        }
+
+        function recalculateMPS() {
+            let baseMps = ((player.usbCount || 0) * config.usb.mpsEffect) +
+                           ((player.cpuCount || 0) * config.cpu.mpsEffect) + 
+                           ((player.hddCount || 0) * config.hdd.mpsEffect) + 
+                           ((player.gpuCount || 0) * config.gpu.mpsEffect) +
+                           ((player.ssdCount || 0) * config.ssd.mpsEffect) +
+                           ((player.quantumCount || 0) * config.quantum.mpsEffect);
+            
+            // 各種時候・誕生日イベント倍率をここで最終乗算する
+            player.mps = (baseMps + (player.debugMpsBonus || 0)) * eventMultiplier;
+            player.mps = Math.round(player.mps * 10) / 10;
+        }
+
+        function recalculateClickPower() {
+            player.clickPower = 1 + ((player.mouse3Count || 0) * config.mouse3.clickEffect) +
+                                    ((player.mouse5Count || 0) * config.mouse5.clickEffect) +
+                                    ((player.caseCount || 0) * config.case.clickEffect) + 
+                                    ((player.coolantCount || 0) * config.coolant.clickEffect) +
+                                    ((player.keyboardCount || 0) * config.keyboard.clickEffect);
+        }
+
+        function switchUser(userId) {
+            saveGame();
+            currentUserId = userId;
+            for (let i = 1; i <= 3; i++){
+                document.getElementById('user-btn-' + i).classList.remove('active');
+            }
+            document.getElementById('user-btn-' + userId).classList.add('active');
+            loadGame(userId);
+        }
+
+        // --- 2.5 時候イベント ＆ 誕生日カウントダウン処理 ---
+        function checkTimeAndEvents() {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const hour = now.getHours();
+
+            let banner = document.getElementById('event-banner');
+            let bonusText = document.getElementById('season-bonus-text');
+            
+            // 初期状態
+            eventMultiplier = 1.0;
+            banner.style.display = "none";
+            bonusText.innerText = "";
+            document.body.style.backgroundColor = "#121214"; // 通常夜・ベース色
+            document.body.style.color = "#00ffcc";
+
+            // ① 時間帯による背景カラーチェンジ
+            if (hour >= 5 && hour < 11) { // 朝
+                document.body.style.backgroundColor = "#1a2634"; 
+            } else if (hour >= 11 && hour < 16) { // 昼
+                document.body.style.backgroundColor = "#24241e"; 
+            } else if (hour >= 16 && hour < 19) { // 夕方
+                document.body.style.backgroundColor = "#2d1f18"; 
+            }
+
+            // ② 特定日付のシーズンイベント（夏至・七夕）
+            if (month === 6 && date === 21) {
+                // 夏至（まさに今日！）
+                eventMultiplier = 1.3;
+                banner.style.display = "block";
+                banner.style.backgroundColor = "#ff9900";
+                banner.style.color = "#000";
+                banner.innerText = "☀️ 本日は夏至イベント！太陽ブーストで自動秒速が1.3倍にアップ中！ ☀️";
+                bonusText.innerText = " (夏至ブースト 1.3倍適用中)";
+            } else if (month === 7 && date === 7) {
+                // 七夕
+                eventMultiplier = 1.4;
+                banner.style.display = "block";
+                banner.style.backgroundColor = "#440088";
+                banner.style.color = "#fff";
+                banner.innerText = "🌌 本日は七夕イベント！星の瞬きで自動秒速が1.4倍にアップ中！ 🌌";
+                bonusText.innerText = " (七夕ブースト 1.4倍適用中)";
+            }
+
+            // ③ 作者の誕生日カウントダウン ＆ 当日お祝い（7月15日）
+            const bdayMonth = 7;
+            const bdayDate = 15;
+            let bdayTime = new Date(now.getFullYear(), bdayMonth - 1, bdayDate);
+            let diffTime = bdayTime - now;
+            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (month === bdayMonth && date === bdayDate) {
+                // 誕生日当日！
+                eventMultiplier = 1.5;
+                banner.style.display = "block";
+                banner.style.backgroundColor = "#ff0055";
+                banner.style.color = "#fff";
+                banner.innerText = "🎉 今日は作者の誕生日イベント！お祝いボーナスで自動秒速が1.5倍に爆上がり中！！ 🎉";
+                bonusText.innerText = " (お祝いブースト 1.5倍適用中)";
+            } else if (diffDays > 0 && diffDays <= 7) {
+                // 1週間前からカウントダウンを表示
+                banner.style.display = "block";
+                banner.style.backgroundColor = "#222227";
+                banner.style.color = "#00ffcc";
+                banner.innerText = `🎂 作者の誕生日まであと ${diffDays} 日！ 7/15当日は何かが起きる…！？`;
+            }
+
+            // 倍率が変わったのでMPSを再計算
+            recalculateMPS();
+        }
+
+        // --- 3. タイマー処理 ---
+        setInterval(() => {
+            player.money += player.mps;
+            player.btc += ((player.miningRigs || 0) * 0.0001) + ((player.autoRigsHdd || 0) * 0.0001) + ((player.autoRigsSsd || 0) * 0.0008); 
+
+            let totalAutoSpeed = ((player.autoRigsHdd || 0) * 0.0001) + ((player.autoRigsSsd || 0) * 0.0008);
+            if (totalAutoSpeed > 0 && player.btc > 0) {
+                if (totalAutoSpeed > player.btc) totalAutoSpeed = player.btc;
+                player.money += Math.floor(totalAutoSpeed * currentBtcRate);
+                player.btc -= totalAutoSpeed;
+            }
+
+            updateUI();
+        }, 1000);
+
+        setInterval(() => { saveGame(); }, 3000);
+
+        setInterval(() => {
+            triggerBtcFluctuation();
+        }, 3000);
+
+        // 時候・イベントのリアルタイム判定（10秒ごとに自動更新）
+        setInterval(() => {
+            checkTimeAndEvents();
+        }, 10000);
+
+        // --- 4. セーブ・ロード（大切なデータを壊さない防衛仕様） ---
+        function saveGame() {
+            // 元のセーブキー名 'pcDarkShopSave' を絶対に変えずに維持！
+            let saveName = (currentUserId === 1) ? 'pcDarkShopSave' : 'pcDarkShopSave_user' + currentUserId;
+            localStorage.setItem(saveName, JSON.stringify(player));
+        }
+
+        function loadGame(userId) {
+            let saveName = (userId === 1) ? 'pcDarkShopSave' : 'pcDarkShopSave_user' + userId;
+            let savedData = localStorage.getItem(saveName);
+            
+            if (savedData) {
+                let loadedData = JSON.parse(savedData);
+                player = createNewPlayerData();
+                Object.assign(player, loadedData); 
+
+                recalculateMPS();
+                recalculateClickPower();
+            } else {
+                player = createNewPlayerData();
+            }
+            updateUI();
+        }
+
+        function resetGame() {
+            if (confirm("ユーザー " + currentUserId + " のデータを本当にリセットしますか？")) {
+                let saveName = (currentUserId === 1) ? 'pcDarkShopSave' : 'pcDarkShopSave_user' + currentUserId;
+                localStorage.removeItem(saveName);
+                player = createNewPlayerData();
+                updateUI();
+            }
+        }
+
+        // --- 5. 画面更新 ＆ グラフ初期化 ---
+        function initChart() {
+            let ctx = document.getElementById('btcChart').getContext('2d');
+            btcChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['', '', '', '', '', '', '', '', '', ''],
+                    datasets: [{
+                        label: 'BTC 価格 (円)',
+                        data: priceHistory,
+                        borderColor: '#ff9900',
+                        backgroundColor: 'rgba(255, 153, 0, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { x: { display: false }, y: { grid: { color: '#333' }, ticks: { color: '#ff9900' } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('money-text').innerText = Math.floor(player.money).toLocaleString();
+            document.getElementById('mps-text').innerText = player.mps;
+            document.getElementById('cpc-text').innerText = player.clickPower;
+            
+            document.getElementById('btc-text').innerText = player.btc.toFixed(4);
+            document.getElementById('rig-text').innerText = player.miningRigs || 0;
+            
+            let totalAutoRigs = (player.autoRigsHdd || 0) + (player.autoRigsSsd || 0);
+            document.getElementById('auto-rig-text').innerText = totalAutoRigs + " 台 (HDD:" + (player.autoRigsHdd || 0) + " / SSD:" + (player.autoRigsSsd || 0) + ")";
+            document.getElementById('btc-rate-text').innerText = currentBtcRate.toLocaleString();
+
+            for (let type in config) {
+                let currentCount = player[type + 'Count'] || 0;
+                let price = Math.floor(config[type].basePrice * Math.pow(1.15, currentCount));
+                let btn = document.getElementById('btn-' + type);
+                if (btn) {
+                    btn.innerText = price.toLocaleString() + "円 (" + currentCount + ")";
+                    btn.disabled = (player.money < price);
+                }
+            }
+
+            document.getElementById('btn-to-mining').disabled = ((player.gpuCount || 0) < 1);
+            document.getElementById('btn-to-auto-hdd').disabled = ((player.hddCount || 0) < 1);
+            document.getElementById('btn-to-auto-ssd').disabled = ((player.ssdCount || 0) < 1);
+        }
+
+        window.onload = function() {
+            initChart();
+            loadGame(1);
+            checkTimeAndEvents(); // 起動時にイベント判定を即走らせる
+        };
+    </script>
+</body>
+</html>
