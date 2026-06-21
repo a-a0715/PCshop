@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCショップ（名前シンプルすぎだろ）</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* --- 1. 基本セットアップ ＆ 時候連動の可変背景 --- */
+        :root {
+            --theme-bg: #121214;
+            --theme-panel: #1e1e24;
+            --theme-accent: #00ffcc;
+            --theme-text: #ffffff;
+            --theme-sub: #888899;
+            --transition-speed: 1.5s;
+        }
+
+        /* 時候状態に応じたテーマ定義 */
+        body.time-morning {
+            --theme-bg: linear-gradient(135deg, #1f2d3d 0%, #3a506b 100%);
+            --theme-panel: rgba(30, 41, 59, 0.85);
+            --theme-accent: #38bdf8;
+            --theme-text: #f8fafc;
+        }
+        body.time-day {
+            --theme-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --theme-panel: rgba(30, 41, 59, 0.9);
+            --theme-accent: #10b981;
+            --theme-text: #ffffff;
+        }
+        body.time-evening {
+            --theme-bg: linear-gradient(135deg, #311b1b 0%, #180808 100%);
+            --theme-panel: rgba(45, 20, 20, 0.85);
+            --theme-accent: #f97316;
+            --theme-text: #fef2f2;
+        }
+        body.time-night {
+            --theme-bg: linear-gradient(135deg, #09090e 0%, #020205 100%);
+            --theme-panel: rgba(15, 15, 25, 0.9);
+            --theme-accent: #8b5cf6;
+            --theme-text: #f5f3ff;
+        }
+        /* 特殊イベント：夏至 */
+        body.event-solstice {
+            --theme-bg: linear-gradient(135deg, #1c100b 0%, #0c0502 100%);
+            --theme-panel: rgba(35, 20, 15, 0.9);
+            --theme-accent: #f59e0b;
+        }
+        /* 特殊イベント：七夕 */
+        body.event-tanabata {
+            --theme-bg: linear-gradient(135deg, #020617 0%, #1e1b4b 100%);
+            --theme-panel: rgba(15, 23, 42, 0.9);
+            --theme-accent: #ec4899;
+        }
+
+        body {
+            background: var(--theme-bg);
+            background-attachment: fixed;
+            color: var(--theme-text);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            transition: background var(--transition-speed), color var(--transition-speed);
+        }
+
+        h1 {
+            border-bottom: 2px solid var(--theme-accent);
+            padding-bottom: 10px;
+            text-shadow: 0 0 10px var(--theme-accent);
+            transition: border var(--transition-speed), text-shadow var(--transition-speed);
+            text-align: center;
+        }
+
+        /* 時候情報ヘッダー */
+        .season-ticker {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--theme-accent);
+            border-radius: 8px;
+            padding: 10px 20px;
+            width: 100%;
+            max-width: 960px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .ticker-active {
+            color: var(--theme-accent);
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        /* コンテナ ＆ パネル */
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 1000px; }
+        .panel { 
+            background: var(--theme-panel); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid var(--theme-accent); 
+            flex: 1; 
+            min-width: 350px; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: background var(--transition-speed), border var(--transition-speed);
+        }
+        
+        /* 異国の文化（パズル） */
+        .puzzle-panel {
+            background: rgba(0, 0, 0, 0.8); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 2px solid #ff00ff; 
+            flex: 1; 
+            min-width: 320px; 
+            max-width: 400px; 
+            display: none;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+            user-select: none;
+            touch-action: none;
+        }
+        .puzzle-board {
+            width: 180px; height: 360px; background: #000; border: 3px solid #ff00ff;
+            margin: 10px auto; display: grid; grid-template-rows: repeat(12, 1fr); grid-template-columns: repeat(6, 1fr);
+            position: relative;
+        }
+        .cell { border: 1px solid #111; border-radius: 50%; width: 100%; height: 100%; box-sizing: border-box; }
+        .puyo-1 { background: #ff3333; box-shadow: inset 0 0 8px #ff8888, 0 0 5px #ff3333; }
+        .puyo-2 { background: #3333ff; box-shadow: inset 0 0 8px #8888ff, 0 0 5px #3333ff; }
+        .puyo-3 { background: #33ff33; box-shadow: inset 0 0 8px #88ff88, 0 0 5px #33ff33; }
+        .puyo-4 { background: #ffff33; box-shadow: inset 0 0 8px #ffff88, 0 0 5px #ffff33; }
+        
+        .puzzle-btn-container { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
+        .puzzle-ctrl-btn { background: #222; color: #ff00ff; border: 1px solid #ff00ff; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1; }
+
+        /* デバッグパネル */
+        .admin-box {
+            width: 100%; max-width: 960px; margin-bottom: 20px; background: rgba(30, 30, 40, 0.8); 
+            padding: 12px; border-radius: 8px; border: 1px solid #444; text-align: center;
+        }
+        .admin-input {
+            background: #121214; color: #fff; border: 1px solid var(--theme-accent); 
+            padding: 5px 10px; border-radius: 4px; width: 100px; text-align: center; font-size: 1rem;
+        }
+        .admin-btn {
+            background: #333; color: var(--theme-accent); border: 1px solid var(--theme-accent); 
+            padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .debug-panel {
+            margin-top: 15px; padding: 15px; background: rgba(255, 0, 0, 0.05); 
+            border-radius: 8px; border: 2px dotted #ff3333; color: #ff8888; display: none;
+        }
+        .debug-btn {
+            background: #222; color: #ff8888; border: 1px solid #ff3333; padding: 6px 12px; 
+            margin: 5px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem;
+        }
+        .debug-btn:hover { background: #ff3333; color: #fff; }
+
+        /* コントロール周り */
+        .user-selector {
+            background: rgba(0, 0, 0, 0.2); padding: 8px 15px; border-radius: 8px;
+            border: 1px solid var(--theme-accent); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+        }
+        .user-btn {
+            background: #222; color: #fff; border: 1px solid #555; padding: 6px 12px;
+            border-radius: 4px; cursor: pointer; font-size: 0.85rem;
+        }
+        .user-btn.active {
+            background: var(--theme-accent); color: #121214; border-color: var(--theme-accent);
+            box-shadow: 0 0 10px var(--theme-accent);
+        }
+
+        .money { font-size: 1.8rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px var(--theme-accent); } 
+        .btc-money { font-size: 1.8rem; font-weight: bold; color: #f59e0b; text-shadow: 0 0 10px #f59e0b; } 
+
+        .btn-click {
+            background: var(--theme-accent); color: #121214; border: none; padding: 12px 25px;
+            font-size: 1.1rem; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; margin-bottom: 10px;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+        .btn-click:active { transform: scale(0.98); }
+        .btn-dark {
+            background: #f59e0b; color: #121214; border: none; padding: 10px 15px;
+            font-size: 1rem; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 5px; width: 100%;
+        }
+        .btn-dark:disabled { background: #444; color: #888; cursor: not-allowed; }
+        
+        .shop-scroll { max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        .shop-item {
+            background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.1); padding: 12px;
+            margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .shop-btn { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; min-width: 110px; }
+        .shop-btn:disabled { background: #444; color: #888; cursor: not-allowed; }        
+        
+        .chart-box { background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 8px; border: 1px solid #f59e0b; margin-top: 15px; }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; text-shadow: 0 0 8px var(--theme-accent); }
+            100% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ELECTRONICS SHOP</h1>
+
+    <!-- 時候・天候表示ヘッダー -->
+    <div class="season-ticker">
+        <div>
+            <i class="fa-regular fa-clock"></i> 現実の時刻: <span id="real-time-text">--:--:--</span>
+        </div>
+        <div class="ticker-active">
+            <span id="season-status-icon"><i class="fa-solid fa-cloud-moon"></i></span>
+            時候同期状態: <span id="season-status-text">データ取得中...</span>
+        </div>
+        <div>
+            <span id="season-bonus-text" style="color: #ffff00;"></span>
+        </div>
+    </div>
+
+    <!-- 開発者解除 & 時候テストパネル -->
+    <div class="admin-box">
+        <span>開発者モード: </span>
+        <input type="password" id="pass-input" class="admin-input" placeholder="******" maxlength="8">
+        <button class="admin-btn" onclick="checkPassword()">解除</button>
+        <button class="admin-btn" style="color: #ff00ff; border-color: #ff00ff; margin-left: 10px;" onclick="togglePuzzlePanel()">異国の文化 (パズル)</button>
+        
+        <!-- 管理者用時候デバッグ -->
+        <div class="debug-panel" id="secret-debug-panel">
+            <strong>【時候シミュレーター】(みんなに見せる用の強制切替)</strong><br>
+            <button class="debug-btn" onclick="forceTimeTheme('morning')">🌅 朝テーマ</button>
+            <button class="debug-btn" onclick="forceTimeTheme('day')">☀️ 昼テーマ</button>
+            <button class="debug-btn" onclick="forceTimeTheme('evening')">🌇 夕方テーマ</button>
+            <button class="debug-btn" onclick="forceTimeTheme('night')">🌌 夜テーマ</button>
+            <button class="debug-btn" onclick="forceTimeTheme('solstice')">🌻 夏至(ロングデイ)</button>
+            <button class="debug-btn" onclick="forceTimeTheme('tanabata')">🎋 七夕(天の川)</button>
+            <button class="debug-btn" onclick="forceTimeTheme('auto')" style="border-color: #fff; color: #fff;">🔄 自動同期に戻す</button>
+            <hr style="border: 0; border-top: 1px dotted #ff3333; margin: 10px 0;">
+            <button class="debug-btn" onclick="debugAddMoney()">お金を1億円増やす</button>
+            <button class="debug-btn" onclick="debugAddBtc()">BTCを100枚増やす</button>
+        </div>
+    </div>
+
+    <!-- ユーザー切り替え -->
+    <div class="user-selector">
+        <span>ユーザー選択:</span>
+        <button id="user-btn-1" class="user-btn active" onclick="switchUser(1)">ユーザー 1</button>
+        <button id="user-btn-2" class="user-btn" onclick="switchUser(2)">ユーザー 2</button>
+        <button id="user-btn-3" class="user-btn" onclick="switchUser(3)">ユーザー 3</button>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div class="container">
+        
+        <!-- 左：PCショップ側 -->
+        <div class="panel">
+            <h3>🏢 組み立て工場</h3>
+            <div class="money"><span id="money-text">0</span> 円</div>
+            <div style="margin-top: 5px;">自動秒速: <span id="mps-text">0</span> 円/秒</div>
+            <div style="color: #ffff00;">クリックパワー: <span id="cpc-text">1</span> 円</div>
+            <br>
+            <button class="btn-click" onclick="clickMain()">パーツを組み立てる！</button>
+            
+            <div style="margin-bottom: 15px;">
+                <button onclick="saveGame()" style="background: #333; color: #fff; border: 1px solid #fff; padding: 5px 10px; cursor: pointer; border-radius:4px;">セーブ</button>
+                <button onclick="resetGame()" style="background: #500; color: #ff8888; border: 1px solid #ff8888; padding: 5px 10px; cursor: pointer; margin-left: 5px; border-radius:4px;">リセット</button>
+            </div>
+
+            <h4>🔧 パーツショップ</h4>
+            <div class="shop-scroll">
+                <div class="shop-item">
+                    <div><strong>USBメモリ 💾</strong><br><small>効果: +0.2円/秒</small></div>
+                    <button class="shop-btn" id="btn-usb" onclick="buyItem('usb')">4円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>中古のCPU</strong><br><small>効果: +1円/秒</small></div>
+                    <button class="shop-btn" id="btn-cpu" onclick="buyItem('cpu')">10円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>3ボタンマウス 🖱️</strong><br><small>効果: クリックパワー+2円</small></div>
+                    <button class="shop-btn" id="btn-mouse3" onclick="buyItem('mouse3')">40円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>大容量HDD 📀</strong><br><small>効果: +5円/秒</small></div>
+                    <button class="shop-btn" id="btn-hdd" onclick="buyItem('hdd')">60円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>普通のグラボ</strong><br><small>効果: +15円/秒</small></div>
+                    <button class="shop-btn" id="btn-gpu" onclick="buyItem('gpu')">150円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>5ボタンマウス 🖲️</strong><br><small>効果: クリックパワー+12円</small></div>
+                    <button class="shop-btn" id="btn-mouse5" onclick="buyItem('mouse5')">350円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>光るLEDケース</strong><br><small>効果: クリックパワー+5円</small></div>
+                    <button class="shop-btn" id="btn-case" onclick="buyItem('case')">500円 (0)</button>
+                </div>
+                <div class="shop-item">
+                    <div><strong>高速SSD ⚡</strong><br><small>効果: +45円/秒</small></div>
+                    <button class="shop-btn" id="btn-ssd" onclick="buyItem('ssd')">900円 (0)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中央：異国の文化（パズル） -->
+        <div class="puzzle-panel" id="puzzle-box">
+            <h3 style="color: #ff00ff; text-align: center; margin-top:0;">異国の文化</h3>
+            <div style="font-size:0.85rem; text-align:center; color:#aaa;">
+                連鎖数 × ５０円 × クリックパワー<br>
+                <span id="puzzle-event-status" style="color: #ec4899; font-weight: bold;"></span>
+            </div>
+            <div id="combo-alert" style="color: #ffff00; font-weight:bold; text-align:center; height:20px; margin-top:5px;"></div>
+
+            <div class="puzzle-board" id="board-grid"></div>
+
+            <div class="puzzle-btn-container">
+                <button class="puzzle-ctrl-btn" onclick="movePuyo(-1)">左</button>
+                <button class="puzzle-ctrl-btn" onclick="rotatePuyo()">回転</button>
+                <button class="puzzle-ctrl-btn" onclick="movePuyo(1)">右</button>
+                <button class="puzzle-ctrl-btn" onclick="dropPuyoFast()">下</button>
+            </div>
+        </div>
+
+        <!-- 右：マイニング側 -->
+        <div class="panel" style="border-color: #f59e0b;">
+            <h3>マイニング工場</h3>
+            <div class="btc-money"><span id="btc-text">0.0000</span> BTC</div>
+            <div style="margin-top: 5px; color: #f59e0b;">稼働中のリグ: <span id="rig-text">0</span> 台</div>
+            <div style="color: var(--theme-accent);">自動売却リグ: <span id="auto-rig-text">0</span> 台</div>
+            <div style="color: #ffaa55; margin-top: 5px;">現在のBTC価格: 1 BTC = <span id="btc-rate-text">10000</span> 円</div>
+            <br>
+            
+            <button class="btn-dark" id="btn-to-mining" onclick="convertGpuToRig()">グラボ1枚 ➔ 【マイニングリグ】(通常効率)</button>
+            <button class="btn-dark" id="btn-to-auto-hdd" style="background: #38bdf8; color: #000;" onclick="convertHddToAutoRig()">HDD1台 ➔ 【自動売却リグ】(換金効率:低)</button>
+            <button class="btn-dark" id="btn-to-auto-ssd" style="background: #0284c7; color: white;" onclick="convertSsdToAutoRig()">⚡SSD1台 ➔ 【高速自動売却リグ】(換金効率:高)</button>
+            <button class="btn-dark" style="background: var(--theme-accent); color: #000;" onclick="sellBtc()">BTCをすべて現金化する</button>
+
+            <div class="chart-box">
+                <canvas id="btcChart" style="width:100%; height:180px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. ゲーム状態 ＆ 時候システム変数 ---
+        function createNewPlayerData() {
+            return {
+                money: 0, mps: 0, clickPower: 1, 
+                usbCount: 0, cpuCount: 0, mouse3Count: 0, hddCount: 0, gpuCount: 0, 
+                mouse5Count: 0, caseCount: 0, ssdCount: 0, coolantCount: 0, keyboardCount: 0, quantumCount: 0,
+                btc: 0, miningRigs: 0, autoRigsHdd: 0, autoRigsSsd: 0
+            };
+        }
+
+        let player = createNewPlayerData();
+        let currentUserId = 1;
+
+        const config = {
+            usb: { basePrice: 4, mpsEffect: 0.2, clickEffect: 0 },
+            cpu: { basePrice: 10, mpsEffect: 1, clickEffect: 0 },
+            mouse3: { basePrice: 40, mpsEffect: 0, clickEffect: 2 },
+            hdd: { basePrice: 60, mpsEffect: 5, clickEffect: 0 },
+            gpu: { basePrice: 150, mpsEffect: 15, clickEffect: 0 },
+            mouse5: { basePrice: 350, mpsEffect: 0, clickEffect: 12 },
+            case: { basePrice: 500, mpsEffect: 0, clickEffect: 5 },
+            ssd: { basePrice: 900, mpsEffect: 45, clickEffect: 0 }
+        };
+
+        let currentBtcRate = 10000;
+        let priceHistory = [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000];
+        let btcChart;
+
+        // 時候・環境ボーナス倍率
+        let currentSeason = 'normal'; // 'normal', 'morning', 'day', 'evening', 'night', 'solstice', 'tanabata'
+        let forcedSeason = 'auto'; // 'auto' または強制値
+        let miningEfficiency = 1.0; 
+        let puzzleMultiplier = 1;
+
+        // --- 2. 時候同期アルゴリズム ---
+        function updateSeasonSync() {
+            const now = new Date();
+            
+            // 時刻表示
+            const timeString = now.toTimeString().split(' ')[0];
+            document.getElementById('real-time-text').innerText = timeString;
+
+            if (forcedSeason !== 'auto') {
+                applySeasonEffects(forcedSeason);
+                return;
+            }
+
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const hour = now.getHours();
+
+            let targetSeason = 'day';
+            
+            // 季節イベント優先
+            if (month === 6 && date === 21) {
+                targetSeason = 'solstice'; // 夏至
+            } else if (month === 7 && date === 7) {
+                targetSeason = 'tanabata'; // 七夕
+            } else {
+                // 通常時の時間帯連動
+                if (hour >= 5 && hour < 10) {
+                    targetSeason = 'morning';
+                } else if (hour >= 10 && hour < 17) {
+                    targetSeason = 'day';
+                } else if (hour >= 17 && hour < 19) {
+                    targetSeason = 'evening';
+                } else {
+                    targetSeason = 'night';
+                }
+            }
+
+            applySeasonEffects(targetSeason);
+        }
+
+        function applySeasonEffects(season) {
+            currentSeason = season;
+            const body = document.body;
+            body.className = ''; // クラスリセット
+
+            let icon = '<i class="fa-solid fa-sun"></i>';
+            let statusText = '通常同期中';
+            let bonusText = '';
+            miningEfficiency = 1.0;
+            puzzleMultiplier = 1;
+
+            switch(season) {
+                case 'morning':
+                    body.classList.add('time-morning');
+                    icon = '<i class="fa-solid fa-cloud-sun"></i>';
+                    statusText = '現実と同調：朝の静寂';
+                    bonusText = '☀️ 朝ボーナス：自動クリック効率微増';
+                    break;
+                case 'day':
+                    body.classList.add('time-day');
+                    icon = '<i class="fa-solid fa-sun"></i>';
+                    statusText = '現実と同調：陽中の稼働';
+                    bonusText = '🔋 昼ボーナス：クリックパワー+1円';
+                    break;
+                case 'evening':
+                    body.classList.add('time-evening');
+                    icon = '<i class="fa-solid fa-cloud-sun-rain"></i>';
+                    statusText = '現実と同調：黄昏時';
+                    bonusText = '🌇 夕方ボーナス：売却価格のブレが活発化';
+                    break;
+                case 'night':
+                    body.classList.add('time-night');
+                    icon = '<i class="fa-solid fa-moon"></i>';
+                    statusText = '現実と同調：夜間モード(目に優しい)';
+                    bonusText = '🌙 夜間ボーナス：自動売却リグの換金率+20%';
+                    break;
+                case 'solstice':
+                    body.classList.add('event-solstice');
+                    icon = '<i class="fa-solid fa-fire"></i>';
+                    statusText = '🌻 特殊同調：夏至（太陽の力）';
+                    bonusText = '🔥 夏至ブースト：全マイニングリグ効率 1.5倍！';
+                    miningEfficiency = 1.5;
+                    break;
+                case 'tanabata':
+                    body.classList.add('event-tanabata');
+                    icon = '<i class="fa-solid fa-star"></i>';
+                    statusText = '🎋 特殊同調：七夕（星合）';
+                    bonusText = '✨ 七夕ブースト：異国の文化（パズル）スコア 2倍！';
+                    puzzleMultiplier = 2;
+                    break;
+            }
+
+            document.getElementById('season-status-icon').innerHTML = icon;
+            document.getElementById('season-status-text').innerText = statusText;
+            document.getElementById('season-bonus-text').innerText = bonusText;
+
+            // パズルのテキスト状態も更新
+            const puzzleEventStatus = document.getElementById('puzzle-event-status');
+            if (puzzleMultiplier > 1) {
+                puzzleEventStatus.innerText = `🌌 現在：七夕補正により連鎖賞金 ${puzzleMultiplier}倍！`;
+            } else {
+                puzzleEventStatus.innerText = '';
+            }
+        }
+
+        function forceTimeTheme(mode) {
+            forcedSeason = mode;
+            updateSeasonSync();
+        }
+
+        // --- 3. 異国の文化（パズルゲーム）ロジック ---
+        const ROWS = 12;
+        const COLS = 6;
+        let grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let currentPiece = null;
+        let isProcessing = false;
+        let puzzleInterval = null;
+
+        function togglePuzzlePanel() {
+            let pBox = document.getElementById('puzzle-box');
+            if (pBox.style.display === "none" || pBox.style.display === "") {
+                pBox.style.display = "block";
+                initPuzzle();
+            } else {
+                pBox.style.display = "none";
+                clearInterval(puzzleInterval);
+            }
+        }
+
+        function initPuzzle() {
+            grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            isProcessing = false;
+            spawnPuyo();
+            renderBoard();
+            clearInterval(puzzleInterval);
+            puzzleInterval = setInterval(() => { if (!isProcessing) movePuyoDown(); }, 1000);
+        }
+
+        function spawnPuyo() {
+            currentPiece = {
+                x: 2, y: 0,
+                color1: Math.floor(Math.random() * 4) + 1,
+                color2: Math.floor(Math.random() * 4) + 1,
+                rot: 0
+            };
+            if (grid[0][2] !== 0 || grid[1][2] !== 0) {
+                grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            }
+        }
+
+        function getPiecePositions(piece) {
+            let x2 = piece.x; let y2 = piece.y;
+            if (piece.rot === 0) y2--;
+            if (piece.rot === 1) x2++;
+            if (piece.rot === 2) y2++;
+            if (piece.rot === 3) x2--;
+            return { x1: piece.x, y1: piece.y, x2: x2, y2: y2 };
+        }
+
+        function isValidMove(x, y, rot) {
+            let temp = { x: x, y: y, rot: rot };
+            let pos = getPiecePositions(temp);
+            if (pos.x1 < 0 || pos.x1 >= COLS || pos.y1 < 0 || pos.y1 >= ROWS) return false;
+            if (pos.x2 < 0 || pos.x2 >= COLS || pos.y2 < 0 || pos.y2 >= ROWS) return false;
+            if (grid[pos.y1][pos.x1] !== 0) return false;
+            if (grid[pos.y2][pos.x2] !== 0) return false;
+            return true;
+        }
+
+        function movePuyo(dir) {
+            if (isProcessing || !currentPiece) return;
+            if (isValidMove(currentPiece.x + dir, currentPiece.y, currentPiece.rot)) {
+                currentPiece.x += dir; renderBoard();
+            }
+        }
+
+        function rotatePuyo() {
+            if (isProcessing || !currentPiece) return;
+            let nextRot = (currentPiece.rot + 1) % 4;
+            if (isValidMove(currentPiece.x, currentPiece.y, nextRot)) {
+                currentPiece.rot = nextRot; renderBoard();
+            }
+        }
+
+        function dropPuyoFast() { if (isProcessing || !currentPiece) return; movePuyoDown(); }
+
+        function movePuyoDown() {
+            if (isProcessing || !currentPiece) return;
+            if (isValidMove(currentPiece.x, currentPiece.y + 1, currentPiece.rot)) {
+                currentPiece.y++; renderBoard();
+            } else { lockPiece(); }
+        }
+
+        function lockPiece() {
+            isProcessing = true;
+            let pos = getPiecePositions(currentPiece);
+            if (pos.y1 >= 0) grid[pos.y1][pos.x1] = currentPiece.color1;
+            if (pos.y2 >= 0) grid[pos.y2][pos.x2] = currentPiece.color2;
+            currentPiece = null;
+            processChains(1);
+        }
+
+        function processChains(chainCount) {
+            let dropped = applyGravity();
+            if (dropped) {
+                renderBoard();
+                setTimeout(() => { processChains(chainCount); }, 200); return;
+            }
+            let matches = checkMatches();
+            if (matches.length > 0) {
+                for (let cell of matches) grid[cell.y][cell.x] = 0;
+                let reward = chainCount * 50 * player.clickPower * puzzleMultiplier;
+                player.money += reward;
+                document.getElementById('combo-alert').innerText = chainCount + "連鎖！ +" + reward.toLocaleString() + "円";
+                updateUI(); renderBoard();
+                setTimeout(() => {
+                    document.getElementById('combo-alert').innerText = "";
+                    processChains(chainCount + 1);
+                }, 400);
+            } else {
+                isProcessing = false; spawnPuyo(); renderBoard();
+            }
+        }
+
+        function applyGravity() {
+            let moved = false;
+            for (let x = 0; x < COLS; x++) {
+                for (let y = ROWS - 2; y >= 0; y--) {
+                    if (grid[y][x] !== 0 && grid[y+1][x] === 0) {
+                        grid[y+1][x] = grid[y][x]; grid[y][x] = 0; moved = true;
+                    }
+                }
+            }
+            return moved;
+        }
+
+        function checkMatches() {
+            let visited = Array(ROWS).fill().map(() => Array(COLS).fill(false));
+            let allMatches = [];
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (grid[y][x] !== 0 && !visited[y][x]) {
+                        let targetColor = grid[y][x];
+                        let connected = []; let queue = [{x: x, y: y}]; visited[y][x] = true;
+                        while(queue.length > 0) {
+                            let curr = queue.shift(); connected.push(curr);
+                            let dirs = [{x:0, y:1}, {x:0, y:-1}, {x:1, y:0}, {x:-1, y:0}];
+                            for(let d of dirs) {
+                                let nx = curr.x + d.x; let ny = curr.y + d.y;
+                                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                                    if (!visited[ny][nx] && grid[ny][nx] === targetColor) {
+                                        visited[ny][nx] = true; queue.push({x: nx, y: ny});
+                                    }
+                                }
+                            }
+                        }
+                        if (connected.length >= 4) allMatches = allMatches.concat(connected);
+                    }
+                }
+            }
+            return allMatches;
+        }
+
+        function renderBoard() {
+            let boardGrid = document.getElementById('board-grid');
+            if (!boardGrid) return;
+            boardGrid.innerHTML = "";
+            let displayGrid = Array(ROWS).fill().map((_, y) => [...grid[y]]);
+            if (currentPiece) {
+                let pos = getPiecePositions(currentPiece);
+                if (pos.y1 >= 0 && pos.y1 < ROWS && pos.x1 >= 0 && pos.x1 < COLS) displayGrid[pos.y1][pos.x1] = currentPiece.color1;
+                if (pos.y2 >= 0 && pos.y2 < ROWS && pos.x2 >= 0 && pos.x2 < COLS) displayGrid[pos.y2][pos.x2] = currentPiece.color2;
+            }
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    let cellDiv = document.createElement('div');
+                    cellDiv.className = "cell";
+                    if (displayGrid[y][x] > 0) cellDiv.classList.add('puyo-' + displayGrid[y][x]);
+                    boardGrid.appendChild(cellDiv);
+                }
+            }
+        }
+
+        // スマホ用タッチ操作
+        let touchStartX = 0; let touchStartY = 0;
+        let touchEndX = 0; let touchEndY = 0;
+        const puzzlePanel = document.getElementById('puzzle-box');
+
+        puzzlePanel.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, {passive: true});
+
+        puzzlePanel.addEventListener('touchend', (e) => {
+            if (isProcessing) return;
+            touchEndX = e.changedTouches[0].clientX;
+            touchEndY = e.changedTouches[0].clientY;
+
+            let diffX = touchEndX - touchStartX;
+            let diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > 30 || Math.abs(diffY) > 30) {
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX > 0) movePuyo(1);
+                    else movePuyo(-1);
+                } else {
+                    if (diffY > 0) dropPuyoFast();
+                }
+            } else {
+                rotatePuyo();
+            }
+        });
+
+        // キーボード操作
+        window.addEventListener('keydown', (e) => {
+            let pBox = document.getElementById('puzzle-box');
+            if (!pBox || pBox.style.display !== "block" || isProcessing) return;
+            if (e.key === "ArrowLeft") { movePuyo(-1); e.preventDefault(); }
+            if (e.key === "ArrowRight") { movePuyo(1); e.preventDefault(); }
+            if (e.key === "ArrowUp") { rotatePuyo(); e.preventDefault(); }
+            if (e.key === "ArrowDown") { movePuyoDown(); e.preventDefault();}
+        });
+
+        // --- 4. 開発者解除コード & デバッグコマンド ---
+        function checkPassword() {
+            let input = document.getElementById('pass-input').value;
+            let panel = document.getElementById('secret-debug-panel');
+
+            if (input === "0715ao") {
+                panel.style.display = "block";
+                alert("時候同期システムへのフルアクセスを承認しました！");
+            } else {
+                panel.style.display = "none";
+                alert("パスキーが異なります。");
+            }
+        }
+
+        function debugAddMoney() { player.money += 100000000; updateUI(); }
+        function debugAddBtc() { player.btc += 100; updateUI(); }
+
+        // --- 5. ゲームのコアロジック（マイニング・増殖） ---
+        function clickMain() {
+            // 時間ボーナス：昼はクリックパワー+1円
+            let currentPower = player.clickPower;
+            if (currentSeason === 'day') {
+                currentPower += 1;
+            }
+            player.money += currentPower;
+            updateUI();
+        }
+
+        function buyItem(type) {
+            let currentCount = player[type + 'Count'] || 0;
+            let price = Math.floor(config[type].basePrice * Math.pow(1.15, currentCount));
+            if (player.money >= price) {
+                player.money -= price;
+                player[type + 'Count'] = currentCount + 1;
+                recalculateMPS();
+                recalculateClickPower();
+                updateUI();
+                saveGame();
+            }
+        }
+
+        function recalculateMPS() {
+            let baseMps = ((player.usbCount || 0) * config.usb.mpsEffect) +
+                           ((player.cpuCount || 0) * config.cpu.mpsEffect) + 
+                           ((player.hddCount || 0) * config.hdd.mpsEffect) + 
+                           ((player.gpuCount || 0) * config.gpu.mpsEffect) +
+                           ((player.ssdCount || 0) * config.ssd.mpsEffect);
+            
+            player.mps = Math.round(baseMps * 10) / 10;
+        }
+
+        function recalculateClickPower() {
+            player.clickPower = 1 + ((player.mouse3Count || 0) * config.mouse3.clickEffect) +
+                                    ((player.mouse5Count || 0) * config.mouse5.clickEffect) +
+                                    ((player.caseCount || 0) * config.case.clickEffect);
+        }
+
+        // マイニング稼働への変換
+        function convertGpuToRig() {
+            if ((player.gpuCount || 0) >= 1) {
+                player.gpuCount--;
+                player.miningRigs = (player.miningRigs || 0) + 1;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
+        function convertHddToAutoRig() {
+            if ((player.hddCount || 0) >= 1) {
+                player.hddCount--;
+                player.autoRigsHdd = (player.autoRigsHdd || 0) + 1;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
+        function convertSsdToAutoRig() {
+            if ((player.ssdCount || 0) >= 1) {
+                player.ssdCount--;
+                player.autoRigsSsd = (player.autoRigsSsd || 0) + 1;
+                recalculateMPS();
+                updateUI();
+            }
+        }
+
+        function sellBtc() {
+            if (player.btc > 0) {
+                let gain = Math.floor(player.btc * currentBtcRate);
+                player.money += gain;
+                player.btc = 0;
+                updateUI();
+                alert(gain + " 円換金しました！");
+            }
+        }
+
+        // --- 6. 時候対応・定期実行ループ（1秒ごと） ---
+        setInterval(() => {
+            // 時候のリアルタイム更新
+            updateSeasonSync();
+
+            // 朝ボーナス：自動MPSに微増
+            let speedBonus = 1.0;
+            if (currentSeason === 'morning') speedBonus = 1.1;
+
+            player.money += player.mps * speedBonus;
+
+            // 夏至のときはマイニング効率がアップ
+            let currentEfficiency = 0.0001 * miningEfficiency;
+            player.btc += ((player.miningRigs || 0) * currentEfficiency);
+
+            // 自動売却の実行
+            let autoSellBtcAmount = ((player.autoRigsHdd || 0) * 0.0001) + ((player.autoRigsSsd || 0) * 0.0008);
+            if (autoSellBtcAmount > 0) {
+                // 夜間ボーナス：自動売却効率アップ
+                let sellModifier = 1.0;
+                if (currentSeason === 'night') sellModifier = 1.2;
+
+                player.money += Math.floor(autoSellBtcAmount * currentBtcRate * sellModifier);
+            }
+
+            updateUI();
+        }, 1000);
+
+        // BTCの変動（夕方は大きく変動する）
+        setInterval(() => {
+            let maxPercent = 0.40;
+            if (currentSeason === 'evening') maxPercent = 0.60; // 夕方はボラティリティUP
+
+            let changePercent = (Math.random() * maxPercent) - (maxPercent / 2);
+            currentBtcRate = Math.floor(currentBtcRate * (1 + changePercent));
+            if (currentBtcRate < 1000) currentBtcRate = 1000;
+            if (currentBtcRate > 300000) currentBtcRate = 300000;
+
+            priceHistory.shift();
+            priceHistory.push(currentBtcRate);
+            if (btcChart) btcChart.update();
+            updateUI();
+        }, 3000);
+
+        // セーブオート
+        setInterval(() => { saveGame(); }, 5000);
+
+        // --- 7. セーブ・ロード・マルチアカウント ---
+                    // --- 7. セーブ・ロード・マルチアカウント（超安全版） ---
+        function saveGame() {
+            let saveName = (currentUserId === 1) ? 'pcSeasonShopSave' : 'pcSeasonShopSave_user' + currentUserId;
+            localStorage.setItem(saveName, JSON.stringify(player));
+        }
+
+        function loadGame(userId) {
+            let saveName = (userId === 1) ? 'pcSeasonShopSave' : 'pcSeasonShopSave_user' + userId;
+            let savedData = localStorage.getItem(saveName);
+    
+            // 【追加：セーフティネット】
+            // もし指定したユーザーIDのデータが見つからなかった場合、
+            // もう一方のセーブデータ名にデータが残っていないか探しに行く
+            if (!savedData) {
+                let alternativeName = (userId === 1) ? 'pcSeasonShopSave_user2' : 'pcSeasonShopSave';
+                let backupData = localStorage.getItem(alternativeName);
+                if (backupData) {
+                    console.log("別アカウント名で保存されていたデータを発見したため、復元します。");
+                    savedData = backupData;
+                }
+            }
+    
+            if (savedData) {
+                let loadedData = JSON.parse(savedData);
+                player = createNewPlayerData();
+                Object.assign(player, loadedData); 
+
+                recalculateMPS();
+                recalculateClickPower();
+            } else {
+                player = createNewPlayerData();
+            }
+            updateUI();
+        }
+
+
+        function switchUser(userId) {
+            saveGame();
+            currentUserId = userId;
+            for (let i = 1; i <= 3; i++){
+                document.getElementById('user-btn-' + i).classList.remove('active');
+            }
+            document.getElementById('user-btn-' + userId).classList.add('active');
+            loadGame(userId);
+        }
+
+        function resetGame() {
+            if (confirm("ユーザー " + currentUserId + " のデータを完全に削除しますか？")) {
+                let saveName = (currentUserId === 1) ? 'pcSeasonShopSave' : 'pcSeasonShopSave_user' + currentUserId;
+                localStorage.removeItem(saveName);
+                player = createNewPlayerData();
+                updateUI();
+            }
+        }
+
+        // --- 8. UI描画 ＆ チャート初期化 ---
+        function initChart() {
+            let ctx = document.getElementById('btcChart').getContext('2d');
+            btcChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['', '', '', '', '', '', '', '', '', ''],
+                    datasets: [{
+                        label: 'BTC リアルタイム市場価格 (円)',
+                        data: priceHistory,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { x: { display: false }, y: { grid: { color: '#333' }, ticks: { color: '#f59e0b' } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('money-text').innerText = Math.floor(player.money).toLocaleString();
+            document.getElementById('mps-text').innerText = player.mps;
+            document.getElementById('cpc-text').innerText = player.clickPower;
+            
+            document.getElementById('btc-text').innerText = player.btc.toFixed(4);
+            document.getElementById('rig-text').innerText = player.miningRigs || 0;
+            
+            let totalAutoRigs = (player.autoRigsHdd || 0) + (player.autoRigsSsd || 0);
+            document.getElementById('auto-rig-text').innerText = totalAutoRigs + " 台 (HDD:" + (player.autoRigsHdd || 0) + " / SSD:" + (player.autoRigsSsd || 0) + ")";
+            document.getElementById('btc-rate-text').innerText = currentBtcRate.toLocaleString();
+
+            for (let type in config) {
+                let currentCount = player[type + 'Count'] || 0;
+                let price = Math.floor(config[type].basePrice * Math.pow(1.15, currentCount));
+                let btn = document.getElementById('btn-' + type);
+                if (btn) {
+                    btn.innerText = price.toLocaleString() + "円 (" + currentCount + ")";
+                    btn.disabled = (player.money < price);
+                }
+            }
+
+            document.getElementById('btn-to-mining').disabled = ((player.gpuCount || 0) < 1);
+            document.getElementById('btn-to-auto-hdd').disabled = ((player.hddCount || 0) < 1);
+            document.getElementById('btn-to-auto-ssd').disabled = ((player.ssdCount || 0) < 1);
+        }
+
+        window.onload = function() {
+            initChart();
+            loadGame(1);
+            updateSeasonSync();
+        };
+    </script>
+</body>
+</html>
