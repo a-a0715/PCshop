@@ -176,8 +176,6 @@
         <button class="debug-btn" onclick="debugAddMps()">秒速（mps）+100,000</button>
         <button class="debug-btn" onclick="debugChangeBtcRate()">今すぐBTC価格を変動</button>
     </div>
-
-    <p style="color: #00ccff; font-size: 15px;">竹若さん、いつも遊んでくれてありがとう！</p>
     
     <div id="clock-container">
         <div id="game-clock">00:00:00</div>
@@ -254,6 +252,19 @@
                     <div><strong>量子コンピューター 🌌</strong><br><small>効果: +500円/秒</small></div>
                     <button class="shop-btn" id="btn-quantum" onclick="buyItem('quantum')">50,000円 (0)</button>
                 </div>
+            </div>
+        </div>
+
+        <button class="btn-click" id="btn-toggle-gacha" style="background: #a855f7; color: #fff; margin-top: 15px; width: 100%; display: block;" onclick="toggleGachaPanel()">
+                🎰 ガチャガチャを開く
+        </button>
+
+        <div id="gacha-panel" style="display: none; margin-top: 20px;">
+            <h4 style="color: #ff00ff; border-top: 1px dashed #555; padding-top: 15px;">🎰 ジャンクパーツガチャ</h4>
+            <div style="background: #25252d; padding: 15px; border-radius: 6px; border: 1px dashed #ff00ff; text-align: center;">
+                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 8px;">1回：<span style="color: #ffff00; font-weight: bold;">100,000円</span></div>
+                <button class="btn-click" id="btn-gacha" style="background: #ff00ff; color: #fff; box-shadow: 0 0 10px #ff00ff;" onclick="drawGacha()">ガチャを回す！</button>                    
+                <div id="gacha-result" style="margin-top: 10px; font-weight: bold; min-height: 40px; color: #00ffcc;"></div>
             </div>
         </div>
 
@@ -475,6 +486,27 @@
                     processChains(chainCount + 1);
                 }, 400);
             } else {
+                let isAllClear = true;
+                for (let y = 0; y < ROWS; y++) {
+                    for (let x = 0; x < COLS; x++) {
+                        if (grid[y][x] !== 0) {
+                            isAllClear = false;
+                            break;
+                        }
+                    }
+                    if (!isAllClear) break;
+                }
+
+                if (isAllClear) {
+                    let allClearReward = 1000000;
+                    player.money += allClearReward;
+
+                    document.getElementById('combo-alert').innerHTML = "<span style='color: #ff00ff; font-size: 1.5rem; text-shadow: 0 0 10px #ff00ff;'>全消しボーナス！</span><br><span style='color: #ffff00;'>+" + allClearReward.toLocaleString() + "円</span>";
+
+                    setTimeout(() => {
+                        document.getElementById('combo-alert').innerText = "";
+                    }, 3000);
+                }
                 isProcessing = false; spawnPuyo(); renderBoard();
             }
         }
@@ -638,6 +670,66 @@
             }
         }
 
+        function drawGacha() {
+            const GACHA_PRICE = 100000;
+
+            if (player.money < GACHA_PRICE) {
+                alert("お金が足りないよ！");
+                return;
+            }
+
+            player.money -= GACHA_PRICE;
+
+            const items = [
+                { wight: 40, name: "壊れたCPU（はずれ）", action: () => { /* 効果なし */ } },
+                { wight: 35, name: "謎のネジ (クリックパワー +5)", action: () => { player.clickPower += 5; } },
+                { wight: 20, name: "お高いグラボ (秒速 mps +50)", action: () => { player.debugMpsBonus = (player.debugMpsBonus || 0) + 50; } },
+                { wight: 4.5, name: "iMac(製作者のパソコン)→クリックパワー +100", action: () => { player.clickPower += 100; } },
+                { wight: 0.5, name: "製作者からのお礼(所持金2倍！)", action: () => { player.money *= 2; } }
+            ];
+
+            let totalWight = items.reduce((sum, item) => sum + item.wight, 0);
+            let random = Math.random() * totalWight;
+            let selectedItem = null;
+
+            for (let item of items) {
+                if (random < item.wight) {
+                    selectedItem = item;
+                    break;
+                }
+                random -= item.wight;
+            }
+
+            if (selectedItem) {
+                selectedItem.action();
+                recalculateMPS();
+                updateUI();
+                saveGame();
+
+                const resultEl = document.getElementById('gacha-result');
+                if (resultEl) {
+                    resultEl.innerHTML = `結果: <br><span style="font-size: 1.1rem; text-shadow: 0 0 5px #00ffcc;">${selectedItem.name}</span>`;
+                }
+            }
+        }
+
+        function toggleGachaPanel() {
+            const gachaPanel = document.getElementById('gacha-panel');
+            const toggleBtn = document.getElementById('btn-toggle-gacha');
+
+            if (gachaPanel && toggleBtn) {
+                if (gachaPanel.style.display === 'none') {
+                    gachaPanel.style.display = 'block';
+                    toggleBtn.innerText = "ガチャガチャを閉じる";
+                    toggleBtn.style.background = "#ef4444";
+                } else {
+                    gachaPanel.style.display = 'none';
+                    toggleBtn.innerText = "ガチャガチャを開く";
+                    toggleBtn.style.background = "#a855f7";
+                }
+            }
+        }
+
         function convertGpuToRig() {
             if ((player.gpuCount || 0) >= 1) {
                 player.gpuCount--;
@@ -795,7 +887,7 @@
             const date = today.getDate();
 
             // ★イベントの名前（ここを書き換えると、セーブデータがあっても新イベントとして認識されます！）
-            const EVENT_NAME = "製作者（あーちゃん）の誕生日記念！！"; 
+            const EVENT_NAME = "製作者（あーちゃん）の誕生日記念！"; 
 
             // 指定の日にちのとき
             if (month === 7 && date === 15) {
@@ -804,8 +896,8 @@
                 if (player.lastSeenEventName !== EVENT_NAME) {
             
                     // 【ここに起こしたい効果を書く】
-                    alert("【" + EVENT_NAME + "】５億円をプレゼント！");
-                    player.money += 500000000;
+                    alert("【" + EVENT_NAME + "】一億円をプレゼント！");
+                    player.money += 100000000;
             
                     // 見たイベント名をセーブデータに上書き保存（これで次から実行されない）
                     player.lastSeenEventName = EVENT_NAME;
